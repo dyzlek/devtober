@@ -140,7 +140,12 @@ function compat(a, b, mode) {
   const chaos = hash([a.data, b.data].sort().join('+') + mode);
 
   const w = mode === 'amour' ? [45, 25, 10, 20] : [55, 15, 15, 15];
-  const score = clamp(Math.round(perso * w[0] + stars * w[1] + color * w[2] + chaos * w[3]), 1, 100);
+  const raw = perso * w[0] + stars * w[1] + color * w[2] + chaos * w[3];
+  // 5. Plus de drame : la somme brute tombe presque toujours entre 30 et 89.
+  //    On la recentre puis on l'étire avec une courbe qui pousse vers les extrêmes,
+  //    pour avoir de vrais coups de foudre (90 %+) et de vrais désastres (moins de 15 %).
+  const x = clamp((raw - 58) / 21, -1, 1);
+  const score = clamp(Math.round(50 + 50 * Math.sign(x) * Math.pow(Math.abs(x), 0.72)), 1, 100);
   return { score, verdict: VERDICTS[mode].find(([max]) => score < max)[1], ia, ib };
 }
 
@@ -224,9 +229,10 @@ function showPicked() {
     : n < 2 ? (miis.length < 2 ? 'Crée un deuxième Mii pour tester' : 'Choisis deux Mii')
     : 'Appuie sur « Tester ! »';
   overlay.innerHTML = `<p class="placeholder bottom">${msg}</p>`;
-  scene3d.set(picked.map((id) => miis.find((m) => m.id === id)).filter(Boolean).map((m) => b64ToBytes(m.data)));
+  const changed = scene3d.set(picked.map((id) => miis.find((m) => m.id === id)).filter(Boolean).map((m) => b64ToBytes(m.data)));
   scene3d.calm();
   scene3d.idle(EXPR.SMILE);
+  if (changed) scene3d.enter();
 }
 document.querySelectorAll('.slot').forEach((el) => el.addEventListener('click', () => {
   activeSlot = Number(el.dataset.slot);
@@ -492,24 +498,25 @@ function runTest() {
   scene3d.set([b64ToBytes(a.data), b64ToBytes(b.data)]);
   scene3d.calm();
   scene3d.idle(EXPR.NORMAL);
+  scene3d.enter();   // les deux Mii arrivent chacun de leur côté
 
   const num = $('.num', overlay);
-  const beats = 10 + Math.round(r.score / 8);
+  const steps = countSequence(r.score);
   let i = 0;
 
-  // Le score monte au rythme d'un cœur qui s'emballe : chaque battement = un palier
+  // Le score avance au rythme d'un cœur : chaque battement = un palier.
+  // Il dépasse, redescend, hésite… puis s'arrête sur le vrai résultat.
   const beat = () => {
     if (token !== runToken) return;
-    i++;
-    const t = i / beats;
-    num.textContent = Math.round(r.score * (1 - Math.pow(1 - t, 2)));
+    const st = steps[i++];
+    num.textContent = st.v;
     heart.classList.remove('beat'); void heart.getBoundingClientRect(); heart.classList.add('beat');
     scene3d.beat();
-    thump(0.5 + t * 0.6);
-    if (i < beats) setTimeout(beat, 420 - 260 * t);
-    else setTimeout(finish, 650);
+    thump(st.strength);
+    if (i < steps.length) setTimeout(beat, steps[i].delay);
+    else setTimeout(finish, 700);
   };
-  setTimeout(beat, 900);
+  setTimeout(beat, 1600);   // on attend la fin de l'entrée en scène
 
   function finish() {
     if (token !== runToken) return;
@@ -528,6 +535,28 @@ function runTest() {
     scene3d.react(r.score);
     if (r.score >= 75) sparkles(md);
   }
+}
+
+/**
+ * Les étapes du compteur, façon Tomodachi Life : ça monte de plus en plus vite,
+ * ça dépasse le vrai score, ça redescend en dessous, ça hésite, et ça s'arrête.
+ * Pour un score très bas, il monte bien haut avant de s'effondrer (c'est plus drôle).
+ */
+function countSequence(score) {
+  const r = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+  const peak = score < 20 ? r(38, 60) : Math.min(100, score + r(6, 14));
+  const dip = Math.max(0, Math.min(score - r(4, 10), peak - 8));
+  const rise = 9 + Math.round(peak / 10);
+  const steps = [];
+  for (let k = 1; k <= rise; k++) {
+    const t = k / rise;
+    steps.push({ v: Math.round(peak * (1 - Math.pow(1 - t, 2))), delay: Math.round(420 - 250 * t), strength: 0.5 + t * 0.5 });
+  }
+  // l'hésitation : plus lente, pour le suspense
+  steps.push({ v: dip, delay: 760, strength: 0.7 });
+  if (Math.abs(score - dip) > 6) steps.push({ v: Math.round((score + dip) / 2) + r(-2, 2), delay: 620, strength: 0.8 });
+  steps.push({ v: score, delay: 680, strength: 1.1 });
+  return steps;
 }
 
 function sparkles(md) {

@@ -254,7 +254,7 @@ export class MiiScene {
   set(list) {
     // mêmes Mii qu'à l'écran : on les garde (pas de rechargement ni de saut d'animation)
     const key = list.map((b) => bytesToB64(b)).join('|');
-    if (key && key === this.key && this.actors.length === list.length) return;
+    if (key && key === this.key && this.actors.length === list.length) return false;
     this.key = key;
     this.clear();
     list.forEach((bytes, i) => {
@@ -268,6 +268,22 @@ export class MiiScene {
       }
       this.scene.add(a.root);
       this.actors.push(a);
+    });
+    return true;
+  }
+
+  /**
+   * Entrée en scène, comme dans Tomodachi Life : chaque Mii arrive de son côté de l'écran
+   * en trottinant, tourné vers le centre, puis se met face à l'autre.
+   */
+  enter() {
+    if (!this.duo) return;
+    const t = this.clock.elapsedTime;
+    this.actors.forEach((a, i) => {
+      if (!a.side) return;
+      a.walk = { t0: t + i * 0.18, from: a.side * 23, dur: 1.15 };
+      a.root.position.set(a.side * 23, 0, 0);
+      a.root.rotation.set(0, -a.side * 1.25, 0);
     });
   }
 
@@ -324,7 +340,17 @@ export class MiiScene {
     for (const a of this.actors) {
       if (!this.duo) a.root.rotation.y = this.spin;
       a.root.scale.setScalar(1 + this.bump * 0.03);
-      if (this.duo && a.side) {
+      if (this.duo && a.side && a.walk) {
+        // en train d'arriver : petits pas sautillants, tourné vers le centre
+        const w = a.walk, p = Math.min(1, Math.max(0, (t - w.t0) / w.dur));
+        const k = 1 - (1 - p) * (1 - p);
+        const step = Math.sin(p * Math.PI * 7);
+        a.root.position.x = w.from + (a.side * 8.6 - w.from) * k;
+        a.root.position.y = Math.abs(step) * 0.55 * (1 - p * 0.6);
+        a.root.rotation.z = step * 0.05;
+        a.root.rotation.y = -a.side * (1.25 - 0.83 * Math.max(0, (p - 0.75) / 0.25));
+        if (p >= 1) { a.walk = null; a.root.position.y = 0; a.root.rotation.z = 0; }
+      } else if (this.duo && a.side) {
         const m = this.mood ?? { x: 8.6, turn: 0.42, lean: 0, shake: 0, hop: 0 };
         const ease = 1 - Math.exp(-dt * 5);   // transition douce vers la nouvelle pose
         const tx = a.side * m.x + Math.sin(t * 40 + a.side) * m.shake * 0.12;
