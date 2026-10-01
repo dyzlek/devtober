@@ -1,5 +1,7 @@
 # Jour 02 · Loop · Téléphone traduit
 
+Deux expériences pour ce jour : **Téléphone traduit**, ci-dessous, et **[Ludo des Mii](ludo/)**, un jeu de société pour un joueur et trois bots. Le sélecteur en haut de la page permet de passer de l’une à l’autre.
+
 Le téléphone arabe, version traducteurs automatiques. Tu écris une phrase en français, elle fait le tour des langues de ta boucle (français → anglais → japonais → russe → arabe → français), et elle revient… pas tout à fait pareille.
 
 ## Le lien avec « Loop »

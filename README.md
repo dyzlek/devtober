@@ -13,7 +13,7 @@ Toutes les créations sont jouables depuis la page d'accueil du repo, publiée s
 | Jour | Mot | Projet |
 | --- | --- | --- |
 | 01 | Pulse | [Testeur d'affinité](day-01-pulse/) |
-| 02 | Loop | [Téléphone traduit](day-02-loop/) |
+| 02 | Loop | [Téléphone traduit](day-02-loop/) · [Ludo des Mii](day-02-loop/ludo/) |
 | 03 | Bloom |  |
 | 04 | Drift |  |
 | 05 | Chaos |  |
