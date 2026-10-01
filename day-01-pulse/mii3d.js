@@ -15,15 +15,19 @@ let ffl = null;
 const bodies = {};         // { m: gltf, f: gltf }
 
 /** Charge le moteur, le fichier de ressources (~4,5 Mo) et les deux corps. */
-export async function initMii() {
+/**
+ * @param {string} [base] dossier qui contient assets/ (par défaut : celui de la page).
+ *   Le Ludo du jour 2 passe '../day-01-pulse/' pour réutiliser les mêmes fichiers.
+ */
+export async function initMii(base = '') {
   const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
   const [f] = await Promise.all([
     // On lit tout le fichier avant de le donner à FFL : GitHub Pages l'envoie compressé (gzip),
     // et FFL réserverait sinon la mémoire d'après la taille compressée (trop petite).
-    fetch('assets/FFLResHigh.dat').then((r) => r.arrayBuffer())
+    fetch(`${base}assets/FFLResHigh.dat`).then((r) => r.arrayBuffer())
       .then((buf) => FFL.initWithResource(new Uint8Array(buf), globalThis.ModuleFFL)),
-    loader.loadAsync('assets/miiBodyM_wiiu.glb').then((g) => { bodies.m = g; }),
-    loader.loadAsync('assets/miiBodyF_wiiu.glb').then((g) => { bodies.f = g; }),
+    loader.loadAsync(`${base}assets/miiBodyM_wiiu.glb`).then((g) => { bodies.m = g; }),
+    loader.loadAsync(`${base}assets/miiBodyF_wiiu.glb`).then((g) => { bodies.f = g; }),
   ]);
   ffl = f;
 }
@@ -75,6 +79,9 @@ export function toCharInfo(bytes) {
   m.dispose();
   return out;
 }
+/** À appeler avec un renderer three.js avant d'y créer des MiiActor (réglages de textures FFL). */
+export function useRenderer(renderer) { ffl.setRenderer(renderer); }
+
 /** Accepte de l'hexadécimal ou du base64. */
 export function parseCode(text) {
   const t = text.replace(/\s+/g, '');
@@ -124,7 +131,7 @@ export function renderIcon(b64) {
    ===================================================================== */
 const _pos = new THREE.Vector3(), _quat = new THREE.Quaternion(), _scl = new THREE.Vector3(), _rootQ = new THREE.Quaternion();
 
-class MiiActor {
+export class MiiActor {
   constructor(renderer, bytes) {
     this.renderer = renderer;
     this.root = new THREE.Group();       // on bouge/tourne ce groupe librement
