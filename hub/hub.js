@@ -1,5 +1,5 @@
 // Le cadre commun : accueil (grille des 31 jours) + page d'un jour (iframe, navigation, README).
-import { DAYS, statusOf } from '../days.js?v=6';
+import { DAYS, statusOf } from '../days.js?v=7';
 
 const $ = (s) => document.querySelector(s);
 const pad = (n) => String(n).padStart(2, '0');
