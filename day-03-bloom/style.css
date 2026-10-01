@@ -169,75 +169,54 @@ button { cursor: pointer; }
 .loading-top.done { opacity: 0; pointer-events: none; }
 
 /* =====================================================================
-   Bloom · écran tactile (4:3) : la console du DJ
+   Bloom · écran tactile (4:3) : le terrain façon osu!, dans le style crème des autres jours
    ===================================================================== */
 .touch {
   width: 49.6cqw; height: 37.2cqw; container-type: inline-size; position: relative; overflow: hidden;
-  display: flex; flex-direction: column; gap: 1.6cqw; padding: 2.2cqw;
-  background: radial-gradient(ellipse at 50% 0%, #2a1f40, #120c1e); color: #f1eaff;
-  font-size: max(9px, 1.55cqw);
+  background: repeating-linear-gradient(-45deg, var(--cream) 0 3cqw, var(--cream-2) 3cqw 6cqw);
+  color: var(--ink); font-size: max(9px, 1.55cqw); touch-action: none; user-select: none;
 }
-.meter { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 1.6cqw; }
-.meter-label { font-weight: 800; color: #b8a6e0; white-space: nowrap; }
-.meter-label b { color: #fff; }
-.meter-bar { height: 2.4cqw; border-radius: 99px; background: #2c2142; overflow: hidden; box-shadow: inset 0 0 0 .3cqw #3d2d5c; }
-.meter-bar i {
-  display: block; height: 100%; width: 0%; border-radius: inherit; transition: width .25s;
-  background: linear-gradient(90deg, #7b2dff, #ff2d95 50%, #ffd02d); box-shadow: 0 0 1.5cqw #ff2d95;
-}
-.crowd { color: #b8a6e0; font-weight: 800; white-space: nowrap; }
-.crowd b { color: #fff; }
-
-.deck { flex: 1; min-height: 0; display: grid; grid-template-columns: auto 1fr; gap: 2cqw; align-items: center; }
-.pad {
-  position: relative; width: 22cqw; height: 22cqw; border-radius: 50%; border: none; padding: 0; cursor: pointer;
-  background: radial-gradient(circle at 50% 40%, #ff5fb0, #b0127a 70%); color: #fff;
-  box-shadow: 0 1.2cqw 0 #6a0b4a, 0 0 4cqw rgba(255, 45, 149, .45); transition: transform .06s, box-shadow .06s;
-  touch-action: manipulation;
-}
-.pad:active, .pad.hit { transform: translateY(1cqw); box-shadow: 0 .2cqw 0 #6a0b4a, 0 0 6cqw rgba(255, 45, 149, .8); }
-.pad-text { position: relative; z-index: 1; font-weight: 900; font-size: 1.25em; line-height: 1.1; text-transform: uppercase; letter-spacing: .04em; }
-/* l'anneau qui bat sur chaque temps : il indique quand taper */
-.pad-ring { position: absolute; inset: -1.2cqw; border-radius: 50%; border: .6cqw solid #fff; opacity: calc(var(--p, 0) * .9); transform: scale(calc(1 + var(--p, 0) * .12)); }
-.side-panel { display: grid; gap: 1.4cqw; min-width: 0; }
-.feedback { margin: 0; font-weight: 800; color: #d8ccf5; min-height: 2.6em; }
-.fx { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1cqw; }
-.fx button {
-  display: grid; justify-items: center; gap: .3cqw; padding: 1cqw .4cqw; border-radius: 2cqw; border: .4cqw solid #3d2d5c;
-  background: #1d1530; color: #d8ccf5; font-weight: 800; font-size: .78em;
-}
-.fx button .ic { width: 4cqw; height: 4cqw; }
-.fx button[aria-pressed="true"] { border-color: #2de2ff; background: #123446; color: #fff; box-shadow: 0 0 2cqw rgba(45, 226, 255, .45); }
-.fx button:disabled { opacity: .4; cursor: not-allowed; }
-.drop {
-  padding: 1.4cqw; border-radius: 99px; border: none; font-weight: 900; font-size: 1.3em; letter-spacing: .2em; color: #2a0b1e;
-  background: linear-gradient(90deg, #ffd02d, #ff2d95); box-shadow: 0 .8cqw 0 #7a1650;
-}
-.drop:disabled { background: #2c2142; color: #6c5a8e; box-shadow: none; cursor: not-allowed; }
-.drop:not(:disabled) { animation: ready .6s ease-in-out infinite alternate; }
-@keyframes ready { to { box-shadow: 0 .8cqw 0 #7a1650, 0 0 4cqw #ff2d95; } }
-.bottom-row { display: flex; justify-content: space-between; align-items: center; }
-.combo { font-weight: 900; color: #b8a6e0; }
-.combo b { color: #ffd02d; font-size: 1.3em; }
+.field { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: crosshair; }
+.hud, .hud-bottom { position: absolute; left: 2cqw; right: 2cqw; display: flex; align-items: center; gap: 2cqw; pointer-events: none; }
+.hud { top: 1.6cqw; }
+.hud-bottom { bottom: 1.6cqw; }
+.hud b { font-weight: 900; }
+.hud-score b { font-size: 1.6em; color: var(--ink); font-variant-numeric: tabular-nums; }
+.hud-acc { color: #9a7a4a; font-weight: 800; font-variant-numeric: tabular-nums; }
+.meter { flex: 1; height: 1.8cqw; border-radius: 99px; background: #fff; box-shadow: inset 0 0 0 .35cqw #f0dfa8; overflow: hidden; }
+.meter i { display: block; height: 100%; width: 0%; border-radius: inherit; transition: width .2s; background: linear-gradient(90deg, #ffc23a, var(--pink)); }
+.combo b { font-size: 2em; font-weight: 900; color: var(--pink); text-shadow: .25cqw .25cqw 0 #fff; font-variant-numeric: tabular-nums; }
+.stage-name { flex: 1; text-align: center; font-weight: 900; color: #9a7a4a; text-transform: uppercase; letter-spacing: .08em; font-size: .85em; }
 .icon-btn {
-  width: 7cqw; height: 7cqw; min-width: 28px; min-height: 28px; border-radius: 50%; border: .4cqw solid #3d2d5c; background: #1d1530;
-  display: inline-grid; place-items: center; color: #d8ccf5; padding: 0;
+  pointer-events: auto; width: 6.4cqw; height: 6.4cqw; min-width: 26px; min-height: 26px; border-radius: 50%;
+  border: .4cqw solid #ecd9a0; background: #fff; display: inline-grid; place-items: center; color: #8a6420; padding: 0;
 }
 .icon-btn .ic { width: 55%; height: 55%; }
 
 .start {
   position: absolute; inset: 0; z-index: 5; display: grid; place-content: center; justify-items: center; gap: 1.6cqw; text-align: center; padding: 4cqw;
-  background: radial-gradient(ellipse at 50% 30%, #3a1f5c, #0e0818);
+  background: repeating-linear-gradient(-45deg, var(--cream) 0 3cqw, var(--cream-2) 3cqw 6cqw);
 }
 .start[hidden] { display: none; }
-.start h2 { margin: 0; font-size: 2.6em; font-weight: 900; color: #fff; text-shadow: 0 0 2cqw #ff2d95; }
-.start p { margin: 0; color: #cdbdf0; font-weight: 700; max-width: 40cqw; }
-.start .small { font-size: .85em; color: #8f7cb8; }
+.start h2 { margin: 0; font-size: 2.4em; font-weight: 900; color: var(--ink); letter-spacing: -.01em; }
+.start p { margin: 0; color: #8a6a44; font-weight: 700; max-width: 40cqw; }
+.start p b { color: var(--pink); }
+.start .small { font-size: .85em; color: #b0905c; }
 .big-btn {
-  padding: 1.6cqw 6cqw; border-radius: 99px; border: none; font-weight: 900; font-size: 1.3em; color: #2a0b1e;
-  background: linear-gradient(90deg, #ffd02d, #ff2d95); box-shadow: 0 1cqw 0 #7a1650;
+  padding: 1.6cqw 6cqw; border-radius: 99px; border: none; font-weight: 900; font-size: 1.3em;
+  background: linear-gradient(#ffd96a, var(--orange)); color: #5a2e00; box-shadow: 0 1cqw 0 #c8700c;
 }
+.big-btn:active { transform: translateY(.8cqw); box-shadow: 0 .2cqw 0 #c8700c; }
 .big-btn:disabled { opacity: .5; cursor: wait; }
+.rank-label { font-weight: 900 !important; color: #9a7a4a !important; text-transform: uppercase; letter-spacing: .1em; }
+.rank {
+  margin: 0; font-weight: 900; font-size: 5em !important; line-height: 1; color: var(--pink) !important;
+  text-shadow: .5cqw .5cqw 0 #fff, 1cqw 1cqw 0 rgba(255, 91, 141, .25);
+}
+.stats { margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: .8cqw 3cqw; text-align: left; }
+.stats div { background: #fff; border-radius: 1.6cqw; padding: .8cqw 1.6cqw; box-shadow: 0 .4cqw 0 #ecdcae; }
+.stats dt { font-size: .75em; font-weight: 800; color: #9a7a4a; }
+.stats dd { margin: 0; font-weight: 900; font-size: 1.15em; font-variant-numeric: tabular-nums; }
 .ic { width: 1.15em; height: 1.15em; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
 
 @container ds (max-width: 620px) {
@@ -248,10 +227,7 @@ button { cursor: pointer; }
   .screen-top { width: 90.8cqw; }
   .base { grid-template-columns: 1fr; padding: 3cqw 3cqw 5cqw; border-radius: 2cqw 2cqw 6cqw 6cqw; }
   .side { display: none; }
-  .touch { width: 92cqw; height: 92cqw; font-size: max(11px, 3cqw); gap: 2.4cqw; padding: 3cqw; }
-  .deck { grid-template-columns: 1fr; justify-items: center; }
-  .pad { width: 38cqw; height: 38cqw; }
-  .fx button .ic { width: 7cqw; height: 7cqw; }
+  .touch { width: 92cqw; height: 92cqw; font-size: max(11px, 3cqw); }
   .icon-btn { width: 10cqw; height: 10cqw; }
   .start p { max-width: none; }
   .hinge { height: 5cqw; margin: -1.6cqw 0; border-radius: 2.5cqw; }

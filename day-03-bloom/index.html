@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=1">
+  <link rel="stylesheet" href="style.css?v=2">
 
   <!-- Moteur Mii (FFL.js) et ressources partagés avec le jour 1 -->
   <script src="../day-01-pulse/lib/ffl/ffl-emscripten-single-file.cjs"></script>
@@ -48,7 +48,6 @@
               <canvas id="club" aria-label="La boîte de nuit en 3D"></canvas>
               <div id="film" class="film">
                 <p id="caption" class="caption" aria-live="polite"></p>
-                <p id="rating" class="rating" aria-hidden="true"></p>
               </div>
               <p id="loading" class="loading-top">Les Mii font la queue à l'entrée…</p>
             </div>
@@ -68,36 +67,40 @@
 
           <div class="center">
             <div class="bezel-bottom">
-              <section class="touch" aria-label="Console du DJ">
-                <div class="meter">
-                  <span class="meter-label">Ambiance <b id="stage-name">Calme</b></span>
-                  <span class="meter-bar"><i id="meter-fill"></i></span>
-                  <span class="crowd"><b id="crowd">0</b> sur la piste</span>
-                </div>
+              <section class="touch" aria-label="Terrain de jeu rythmique">
+                <!-- le terrain façon osu! : les cercles apparaissent ici -->
+                <canvas id="field" class="field" aria-label="Touche les cercles au moment où l'anneau les rejoint"></canvas>
 
-                <div class="deck">
-                  <button id="pad" type="button" class="pad" aria-label="Taper en rythme">
-                    <span class="pad-ring"></span>
-                    <span class="pad-text">Tape<br>en rythme</span>
-                  </button>
-                  <div class="side-panel">
-                    <p id="feedback" class="feedback" aria-live="polite">Tape sur chaque temps, au son du kick.</p>
-                    <div id="fx" class="fx"></div>
-                    <button id="drop" type="button" class="drop" disabled>DROP</button>
-                  </div>
+                <div class="hud">
+                  <span class="hud-score"><b id="score">0</b></span>
+                  <span class="meter" aria-label="Ambiance"><i id="meter-fill"></i></span>
+                  <span class="hud-acc"><b id="acc">100,00</b> %</span>
                 </div>
-
-                <div class="bottom-row">
-                  <span class="combo">Combo <b id="combo">0</b></span>
+                <div class="hud-bottom">
+                  <span class="combo"><b id="combo">0</b>×</span>
+                  <span class="stage-name" id="stage-name">Calme</span>
                   <button id="mute" type="button" class="icon-btn" aria-pressed="false" title="Son" aria-label="Couper le son"><svg class="ic"><use href="#i-sound"/></svg></button>
                 </div>
 
                 <!-- Écran d'entrée -->
                 <div id="start" class="start">
                   <h2>La boîte des Mii</h2>
-                  <p>Tu es le DJ. Tape en rythme pour faire monter l'ambiance : la piste s'illumine, les Mii arrivent, et la fête éclot.</p>
+                  <p>Touche les cercles <b>pile quand l'anneau les rejoint</b>, au rythme de la musique. Chaque cercle réussi fait éclore la fête.</p>
                   <button id="open" type="button" class="big-btn" disabled>Chargement…</button>
-                  <p class="small">Avec le son ! Espace ou clic pour taper.</p>
+                  <p class="small">Souris, doigt, ou touches X / C / Espace en visant avec la souris.</p>
+                </div>
+
+                <!-- Résultats -->
+                <div id="results" class="start" hidden>
+                  <p class="rank-label">Fin de soirée !</p>
+                  <p id="rank" class="rank">S</p>
+                  <dl class="stats">
+                    <div><dt>Score</dt><dd id="r-score">0</dd></div>
+                    <div><dt>Précision</dt><dd id="r-acc">0 %</dd></div>
+                    <div><dt>Meilleur combo</dt><dd id="r-combo">0</dd></div>
+                    <div><dt>300 / 100 / 50 / raté</dt><dd id="r-hits">0</dd></div>
+                  </dl>
+                  <button id="again" type="button" class="big-btn">Rejouer</button>
                 </div>
               </section>
             </div>
@@ -113,6 +116,6 @@
     </div>
   </main>
 
-  <script type="module" src="game.js?v=8"></script>
+  <script type="module" src="game.js?v=14"></script>
 </body>
 </html>

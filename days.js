@@ -16,7 +16,7 @@ export const PUBLISHED = {
     title: 'Téléphone traduit', pitch: 'Une phrase fait le tour des langues et revient… un peu déformée.',
     extras: [{ path: 'ludo', title: 'Ludo des Mii', pitch: 'Un Ludo en 3D dans la 3DS : toi et trois Mii bots, un dé qui roule vraiment.' }],
   },
-  3: { title: 'La boîte des Mii', pitch: 'Tu es le DJ : tape en rythme et fais éclore la fête. Lasers, néons et halo lumineux.' },
+  3: { title: 'La boîte des Mii', pitch: 'Un jeu de rythme façon osu! : chaque cercle réussi fait éclore la fête. Lasers, néons et halo lumineux.' },
 };
 
 export const slugOf = (n) => `day-${String(n).padStart(2, '0')}-${WORDS[n - 1].toLowerCase()}`;

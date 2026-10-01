@@ -80,6 +80,9 @@ export class Club {
     this.buildLasers();
     this.buildBall();
     this.buildSmoke();
+    this.buildLedWall();
+    this.buildCones();
+    this.buildConfetti();
 
     this.dancers = [];      // { actor, spot, yaw, pose }
     this.fx = { lasers: false, strobe: false, ball: true, smoke: false };
@@ -248,6 +251,116 @@ export class Club {
     this.scene.add(this.smoke);
   }
 
+  /** Un mur LED derrière le DJ : un égaliseur qui bat avec la musique. */
+  buildLedWall() {
+    const cv = this.ledCanvas = document.createElement('canvas');
+    cv.width = 256; cv.height = 96;
+    this.ledCtx = cv.getContext('2d');
+    this.ledTex = new THREE.CanvasTexture(cv);
+    this.ledTex.colorSpace = THREE.SRGBColorSpace;
+    this.ledTex.magFilter = THREE.NearestFilter;   // effet « pixels de LED »
+    const wall = new THREE.Mesh(new THREE.PlaneGeometry(16, 6), new THREE.MeshBasicMaterial({ map: this.ledTex }));
+    wall.position.set(0, 7.2, -15.85);
+    const frame = new THREE.Mesh(new THREE.BoxGeometry(16.6, 6.6, 0.2), new THREE.MeshStandardMaterial({ color: 0x0c0a12, roughness: 0.4, metalness: 0.6 }));
+    frame.position.set(0, 7.2, -15.98);
+    this.scene.add(frame, wall);
+    this.eq = new Array(32).fill(0);
+  }
+
+  drawLedWall(beats, energy, pulse, hue) {
+    const g = this.ledCtx, W = 256, H = 96, n = this.eq.length, bw = W / n;
+    g.fillStyle = '#05030a'; g.fillRect(0, 0, W, H);
+    for (let i = 0; i < n; i++) {
+      // chaque barre suit un peu le kick (au centre) et un peu le hasard (sur les côtés)
+      const center = 1 - Math.abs(i - n / 2) / (n / 2);
+      const target = (0.15 + energy * 0.7) * (0.35 + 0.65 * pulse * center + Math.random() * 0.35);
+      this.eq[i] += (target - this.eq[i]) * 0.35;
+      const h = Math.max(2, this.eq[i] * H);
+      for (let y = 0; y < h; y += 4) {
+        const col = new THREE.Color().setHSL((hue + i / n * 0.5 + y / H * 0.15) % 1, 1, 0.55);
+        g.fillStyle = `#${col.getHexString()}`;
+        g.fillRect(i * bw + 1, H - y - 3, bw - 2, 3);
+      }
+    }
+    this.ledTex.needsUpdate = true;
+  }
+
+  /** Des cônes de lumière sous les projecteurs (on « voit » le faisceau dans la fumée). */
+  buildCones() {
+    const geo = new THREE.ConeGeometry(3.2, 1, 32, 1, true);
+    geo.translate(0, -0.5, 0);   // la pointe à l'origine (au projecteur)
+    this.cones = this.spots.map((spot) => {
+      const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
+        color: spot.color, transparent: true, opacity: 0.05, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.FrontSide,
+      }));
+      this.scene.add(m);
+      // le projecteur lui-même : un petit boîtier qui brille
+      const head = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.5, 0.7, 16), new THREE.MeshStandardMaterial({ color: 0x15151a, metalness: 0.7, roughness: 0.3 }));
+      head.position.copy(spot.position);
+      const lens = new THREE.Mesh(new THREE.CircleGeometry(0.42, 20), new THREE.MeshBasicMaterial({ color: spot.color }));
+      this.scene.add(head, lens);
+      return { m, lens, spot };
+    });
+    // la poutre qui porte les projecteurs
+    const truss = new THREE.Mesh(new THREE.BoxGeometry(22, 0.35, 0.35), new THREE.MeshStandardMaterial({ color: 0x2a2a33, metalness: 0.8, roughness: 0.35 }));
+    truss.position.set(0, 13.45, -2);
+    this.scene.add(truss);
+  }
+
+  updateCones(energy) {
+    const up = new THREE.Vector3(0, 1, 0);
+    for (const c of this.cones) {
+      const from = c.spot.position, to = c.spot.target.position;
+      const dir = new THREE.Vector3().subVectors(to, from);
+      const len = dir.length();
+      c.m.position.copy(from);
+      c.m.quaternion.setFromUnitVectors(up, dir.normalize().negate());   // la pointe vers le haut, le cône vers la cible
+      c.m.scale.set(1, len, 1);
+      c.m.material.color.copy(c.spot.color);
+      c.m.material.opacity = 0.025 + energy * 0.045;
+      c.lens.position.copy(from).addScaledVector(dir, 0.4);
+      c.lens.lookAt(to);
+      c.lens.material.color.copy(c.spot.color);
+    }
+  }
+
+  /** Des confettis qui tombent pendant le drop et la pleine floraison. */
+  buildConfetti() {
+    const n = 360;
+    this.confetti = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.14, 0.24), new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }), n);
+    this.confettiData = [];
+    for (let i = 0; i < n; i++) {
+      this.confettiData.push({
+        p: new THREE.Vector3((Math.random() - 0.5) * 26, Math.random() * 14, (Math.random() - 0.5) * 20),
+        r: new THREE.Euler(Math.random() * 6, Math.random() * 6, Math.random() * 6),
+        spin: new THREE.Vector3(Math.random() * 6, Math.random() * 6, Math.random() * 6),
+        fall: 1 + Math.random() * 1.5,
+      });
+      this.confetti.setColorAt(i, PALETTE[i % PALETTE.length]);
+    }
+    this.confetti.visible = false;
+    this.scene.add(this.confetti);
+  }
+
+  updateConfetti(dt, on) {
+    this.confettiOn = on;
+    if (!on && !this.confetti.visible) return;
+    this.confetti.visible = true;
+    const m = new THREE.Matrix4(), q = new THREE.Quaternion();
+    let alive = 0;
+    this.confettiData.forEach((c, i) => {
+      c.p.y -= c.fall * dt;
+      c.p.x += Math.sin(c.r.x) * dt * 0.6;
+      c.r.x += c.spin.x * dt; c.r.y += c.spin.y * dt;
+      if (c.p.y < 0.1) { if (on) { c.p.y = 14 + Math.random() * 3; } else c.p.y = -10; }
+      if (c.p.y > -5) alive++;
+      m.compose(c.p, q.setFromEuler(c.r), new THREE.Vector3(1, 1, 1));
+      this.confetti.setMatrixAt(i, m);
+    });
+    this.confetti.instanceMatrix.needsUpdate = true;
+    if (!on && !alive) this.confetti.visible = false;
+  }
+
   /* =====================================================================
      Les Mii : le DJ et les danseurs
      ===================================================================== */
@@ -365,7 +478,7 @@ export class Club {
     // spots qui balaient, boule à facettes, lasers, fumée, stroboscope
     this.spots.forEach((s, i) => {
       s.target.position.set(Math.sin(t * (0.6 + i * 0.2) + i * 2) * 9, 0, Math.cos(t * (0.5 + i * 0.15)) * 6);
-      s.intensity = 80 + energy * 300 * (0.6 + pulse * 0.4);
+      s.intensity = 60 + energy * 170 * (0.6 + pulse * 0.4);
       s.color.setHSL((hue + i * 0.33) % 1, 1, 0.55);
     });
     this.ambient.intensity = 0.35 + energy * 0.4;
@@ -385,16 +498,21 @@ export class Club {
       sp.position.x += u.vx * dt; sp.position.z += u.vz * dt;
       if (Math.abs(sp.position.x) > 14) u.vx *= -1;
       if (Math.abs(sp.position.z) > 11) u.vz *= -1;
-      const target = this.fx.smoke || drop ? 0.12 + Math.sin(t * 0.5 + u.phase) * 0.04 : 0;
+      const target = this.fx.smoke || drop ? 0.05 + Math.sin(t * 0.5 + u.phase) * 0.02 : 0;
       sp.material.opacity += (target - sp.material.opacity) * Math.min(1, dt * 1.5);
       sp.material.color.setHSL((hue + u.phase * 0.1) % 1, 0.6, 0.6);
     });
     const strobeOn = (this.fx.strobe || drop) && Math.floor(beats * 4) % 2 === 0 && (beats * 4) % 1 < 0.35;
     this.strobeLight.intensity = strobeOn ? 900 : 0;
 
+    // mur LED, faisceaux, confettis
+    this.drawLedWall(beats, energy, pulse, hue);
+    this.updateCones(energy);
+    this.updateConfetti(dt, drop || this.hype >= 95);
+
     // le halo : il « éclot » avec l'ambiance
-    this.bloom.strength = 0.45 + energy * 1.15 + (drop ? 0.5 : 0) + pulse * 0.3 * energy;
-    this.bloom.threshold = 0.72 - energy * 0.12;   // seules les vraies lumières (dalles, néons, lasers) brillent
+    this.bloom.strength = 0.45 + energy * 0.7 + (drop ? 0.3 : 0) + pulse * 0.2 * energy;
+    this.bloom.threshold = 0.78 - energy * 0.08;   // seules les vraies lumières (dalles, néons, lasers) brillent
 
     // le DJ : il hoche la tête sur chaque temps, lève les bras pendant le drop
     if (this.dj) {

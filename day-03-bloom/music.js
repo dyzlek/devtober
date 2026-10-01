@@ -39,6 +39,18 @@ export class Music {
     this.timer = setInterval(() => this.schedule(), 25);
   }
 
+  /** Arrête le morceau (fin de la partie). */
+  stop() { clearInterval(this.timer); this.timer = null; this.drop = false; }
+
+  /** Relance le morceau depuis le début (nouvelle partie). */
+  restart() {
+    if (!this.started) return this.start();
+    this.stop();
+    this.t0 = this.ctx.currentTime + 0.15;
+    this.next = 0;
+    this.timer = setInterval(() => this.schedule(), 25);
+  }
+
   setMuted(m) {
     this.muted = m;
     if (this.out) this.out.gain.setTargetAtTime(m ? 0 : 0.8, this.ctx.currentTime, 0.05);
