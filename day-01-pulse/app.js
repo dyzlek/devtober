@@ -2,7 +2,7 @@
 import {
   initMii, MiiScene, EXPR, renderIcon, randomMii, toCharInfo, parseCode,
   getField, setField, getName, setName, FIELDS, bytesToB64, b64ToBytes,
-} from './mii3d.js';
+} from './mii3d.js?v=1.2c';
 
 const $ = (s, el = document) => el.querySelector(s);
 const STORE = 'devtober-pulse-miis-v3';
@@ -170,9 +170,80 @@ function tone(freq, start, dur, vol, type = 'sine', end = null) {
 }
 const thump = (s = 1) => { tone(95, 0, 0.16, 0.5 * s, 'sine', 40); tone(80, 0.13, 0.14, 0.3 * s, 'sine', 38); };
 const blip = () => tone(880, 0, 0.06, 0.08, 'square');
-function fanfare(score) {
-  const notes = score >= 60 ? [523, 659, 784, 1047] : score >= 30 ? [523, 587, 659] : [392, 349, 311];
-  notes.forEach((f, i) => tone(f, i * 0.12, 0.3, 0.18, 'triangle'));
+
+/** Note avec vibrato (pour le trombone raté). */
+function wobble(freq, start, dur, vol, end) {
+  if (muted) return;
+  try {
+    actx ??= new (window.AudioContext || window.webkitAudioContext)();
+    const t = actx.currentTime + start;
+    const o = actx.createOscillator(), g = actx.createGain(), lfo = actx.createOscillator(), depth = actx.createGain();
+    const lp = actx.createBiquadFilter();
+    o.type = 'sawtooth'; lp.type = 'lowpass'; lp.frequency.value = 900;
+    o.frequency.setValueAtTime(freq, t);
+    o.frequency.exponentialRampToValueAtTime(end, t + dur);
+    lfo.frequency.value = 6; depth.gain.value = freq * 0.03;
+    lfo.connect(depth).connect(o.frequency);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.03);
+    g.gain.setValueAtTime(vol, t + dur * 0.7);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(lp).connect(g).connect(actx.destination);
+    o.start(t); lfo.start(t); o.stop(t + dur + 0.05); lfo.stop(t + dur + 0.05);
+  } catch { /* pas d'audio */ }
+}
+
+const note = (semi) => 523.25 * Math.pow(2, semi / 12);   // demi-tons au-dessus du do5
+
+/**
+ * Musique de suspense pendant que le compteur tourne : une petite boîte à musique
+ * qui monte avec le score, puis un trémolo nerveux quand le compteur hésite.
+ */
+const music = {
+  timer: null, step: 0, level: 0, mode: 'rise',
+  start() {
+    this.stop();
+    this.step = 0; this.level = 0; this.mode = 'rise';
+    this.timer = setInterval(() => this.tick(), 150);
+  },
+  rise(level) { this.level = level; if (this.mode !== 'rise') { this.mode = 'rise'; this.restart(150); } },
+  hesitate() { if (this.mode !== 'hesitate') { this.mode = 'hesitate'; this.restart(95); } },
+  restart(ms) { clearInterval(this.timer); this.timer = setInterval(() => this.tick(), ms); },
+  stop() { clearInterval(this.timer); this.timer = null; },
+  tick() {
+    const s = this.step++;
+    if (this.mode === 'rise') {
+      const arp = [0, 4, 7, 9, 12, 9, 7, 4];
+      const lift = Math.floor(this.level * 6);          // la mélodie grimpe avec le score
+      tone(note(arp[s % 8] + lift - 12), 0, 0.14, 0.05, 'triangle');
+      if (s % 4 === 0) tone(note(lift - 24), 0, 0.3, 0.06, 'sine');
+    } else {
+      tone(note(s % 2 ? -1 : 0), 0, 0.08, 0.035, 'square');   // si-do-si-do… ça stresse
+    }
+  },
+};
+
+/** Jingle du résultat, selon le score : du coup de foudre au trombone raté. */
+function jingle(score) {
+  music.stop();
+  if (score >= 90) {
+    [0, 4, 7, 12, 16].forEach((n, i) => tone(note(n), i * 0.09, 0.3, 0.12, 'triangle'));
+    [0, 4, 7].forEach((n) => tone(note(n + 12), 0.5, 1.1, 0.07, 'triangle'));
+    [24, 28, 31, 36].forEach((n, i) => tone(note(n), 0.65 + i * 0.07, 0.15, 0.04, 'sine'));
+  } else if (score >= 75) {
+    [4, 7, 12].forEach((n, i) => tone(note(n), i * 0.11, 0.28, 0.12, 'triangle'));
+    [0, 4, 7].forEach((n) => tone(note(n), 0.36, 0.7, 0.06, 'triangle'));
+  } else if (score >= 45) {
+    tone(note(7), 0, 0.5, 0.11, 'sine');
+    tone(note(3), 0.22, 0.7, 0.11, 'sine');
+  } else if (score >= 15) {
+    [7, 6, 5].forEach((n, i) => tone(note(n - 12), i * 0.28, 0.3, 0.1, 'triangle'));
+    tone(note(4 - 12), 0.84, 0.9, 0.1, 'triangle', note(1 - 12));
+  } else {
+    // le trombone raté : wah… wah… wah… waaaah
+    [[-5, -6], [-6, -7], [-7, -8]].forEach(([a, b], i) => wobble(note(a - 12), i * 0.42, 0.36, 0.12, note(b - 12)));
+    wobble(note(-8 - 12), 1.26, 1.3, 0.12, note(-11 - 12));
+  }
 }
 
 /* =====================================================================
@@ -222,6 +293,7 @@ $('#grid').addEventListener('click', (e) => {
 /** Avant le test : les Mii choisis attendent sur l'écran du haut. */
 function showPicked() {
   runToken++;
+  music.stop();
   stage.className = `stage ${mode()}`;
   heart.classList.remove('alive');
   const n = picked.filter(Boolean).length;
@@ -232,6 +304,8 @@ function showPicked() {
   const changed = scene3d.set(picked.map((id) => miis.find((m) => m.id === id)).filter(Boolean).map((m) => b64ToBytes(m.data)));
   scene3d.calm();
   scene3d.idle(EXPR.SMILE);
+  scene3d.lively(true);
+  clearBubbles();
   if (changed) scene3d.enter();
 }
 document.querySelectorAll('.slot').forEach((el) => el.addEventListener('click', () => {
@@ -485,6 +559,7 @@ function runTest() {
   const md = mode();
   const r = compat(a, b, md);
   const token = ++runToken;
+  music.stop();
 
   stage.className = `stage ${md} running`;
   heart.querySelector('path').setAttribute('d', SHAPES[md]);
@@ -496,9 +571,11 @@ function runTest() {
     <p class="verdict">${esc(r.verdict)}</p>`;
 
   scene3d.set([b64ToBytes(a.data), b64ToBytes(b.data)]);
-  scene3d.calm();
+  scene3d.lively(false);
+  scene3d.watch();   // ils regardent le score
   scene3d.idle(EXPR.NORMAL);
   scene3d.enter();   // les deux Mii arrivent chacun de leur côté
+  clearBubbles();
 
   const num = $('.num', overlay);
   const steps = countSequence(r.score);
@@ -510,20 +587,21 @@ function runTest() {
     if (token !== runToken) return;
     const st = steps[i++];
     num.textContent = st.v;
+    if (st.hes) music.hesitate(); else music.rise(i / steps.length);
     heart.classList.remove('beat'); void heart.getBoundingClientRect(); heart.classList.add('beat');
     scene3d.beat();
     thump(st.strength);
     if (i < steps.length) setTimeout(beat, steps[i].delay);
     else setTimeout(finish, 700);
   };
-  setTimeout(beat, 1600);   // on attend la fin de l'entrée en scène
+  setTimeout(() => { if (token === runToken) { music.start(); beat(); } }, 1600);   // on attend la fin de l'entrée en scène
 
   function finish() {
     if (token !== runToken) return;
     num.textContent = r.score;
     $('.score', overlay).classList.add('pop');
     $('.verdict', overlay).classList.add('show');
-    fanfare(r.score);
+    jingle(r.score);
 
     // Le cœur continue de battre : plus l'affinité est forte, plus le pouls est rapide
     const bpm = 45 + r.score * 1.1;
@@ -534,7 +612,90 @@ function runTest() {
     // Les Mii réagissent : plus c'est bas, plus ils se détestent ; plus c'est haut, plus ils s'aiment
     scene3d.react(r.score);
     if (r.score >= 75) sparkles(md);
+    showBubbles(r.score, md, token);
   }
+}
+
+/* ---------- Bulles de réaction au-dessus des Mii ---------- */
+const LINES = {
+  amour: [
+    [90, ['Mon âme sœur !', '♥ ♥ ♥', "C'était écrit !", 'Enfin toi…']],
+    [75, ['Hihi…', 'Trop mignon !', 'Mon cœur !', '♥']],
+    [60, ['Oh ?', 'Pas mal…', 'Hé hé.', 'Intéressant…']],
+    [45, ['Hmm…', 'Bon.', 'Peut-être ?', 'Ah.']],
+    [30, ['…', 'Mouais.', 'Sans plus.', 'Ah bon.']],
+    [15, ['Hmph !', 'Pff…', 'Non merci.', 'Gênant…']],
+    [0, ['Beurk !', 'JAMAIS !', 'Hmph !!', 'Au secours…']],
+  ],
+  amitie: [
+    [90, ['Meilleurs potes !', 'À la vie !', '★ ★ ★', 'Inséparables !']],
+    [75, ['Trop forts !', 'Les copains !', 'Top !', '★']],
+    [60, ['Sympa !', 'Cool.', "On s'entend bien.", 'Hé hé !']],
+    [45, ['Salut…', 'Ouais.', 'Bof ?', 'Hmm.']],
+    [30, ['…', 'Hum.', 'On se connaît ?', 'Euh…']],
+    [15, ['Hmph !', 'Pff…', 'Lui ?!', 'Grr…']],
+    [0, ['Jamais !', 'Grr…', 'Hmph !!', "Va-t'en !"]],
+  ],
+};
+let bubbleRaf = 0, bubbleTimers = [];
+
+function clearBubbles() {
+  cancelAnimationFrame(bubbleRaf);
+  bubbleTimers.forEach(clearTimeout); bubbleTimers = [];
+  overlay.querySelectorAll('.bubble, .float-icon').forEach((el) => el.remove());
+  overlay.classList.remove('talking');
+}
+
+function showBubbles(score, md, token) {
+  const lines = LINES[md].find(([min]) => score >= min)[1];
+  const shuffled = [...lines].sort(() => Math.random() - 0.5);
+  const mood = score >= 75 ? 'good' : score < 30 ? 'bad' : '';
+  const bubbles = [];
+  const later = (ms, fn) => bubbleTimers.push(setTimeout(() => { if (token === runToken) fn(); }, ms));
+
+  // le titre s'efface le temps que les Mii parlent (les bulles sont juste au-dessus des têtes)
+  later(400, () => overlay.classList.add('talking'));
+  later(5400, () => overlay.classList.remove('talking'));
+
+  [0, 1].forEach((i) => later(500 + i * 700, () => {
+    const b = document.createElement('p');
+    b.className = `bubble ${mood}`;
+    b.textContent = shuffled[i];
+    overlay.append(b);
+    bubbles[i] = b;
+    later(3800, () => { b.classList.add('out'); later(400, () => b.remove()); });
+  }));
+
+  // très bon score : des cœurs (ou des étoiles) s'envolent au-dessus des têtes
+  if (score >= 90) {
+    for (let k = 0; k < 10; k++) later(700 + k * 420, () => {
+      const pos = scene3d.headScreen()[k % 2];
+      if (!pos) return;
+      const ic = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      ic.setAttribute('class', `float-icon ic fill ${md}`);
+      ic.innerHTML = `<use href="#i-${md === 'amour' ? 'heart' : 'star'}"/>`;
+      ic.style.left = `${pos.x + (Math.random() * 6 - 3)}%`;
+      ic.style.top = `${pos.y}%`;
+      overlay.append(ic);
+      later(1800, () => ic.remove());
+    });
+  }
+
+  // les bulles suivent la tête des Mii (ils bougent : sautillent, s'éloignent…)
+  const follow = () => {
+    const heads = scene3d.headScreen();
+    bubbles.forEach((b, i) => {
+      if (!b || !heads[i]) return;
+      // la bulle reste dans l'écran, même quand le Mii saute ou que sa tête dépasse en haut
+      const half = (b.offsetWidth / overlay.clientWidth) * 50 + 2;
+      const minTop = (b.offsetHeight / overlay.clientHeight) * 100 + 4;
+      b.style.left = `${Math.min(100 - half, Math.max(half, heads[i].x))}%`;
+      b.style.top = `${Math.min(70, Math.max(minTop, heads[i].y))}%`;
+    });
+    if (token === runToken) bubbleRaf = requestAnimationFrame(follow);
+  };
+  cancelAnimationFrame(bubbleRaf);
+  bubbleRaf = requestAnimationFrame(follow);
 }
 
 /**
@@ -553,9 +714,9 @@ function countSequence(score) {
     steps.push({ v: Math.round(peak * (1 - Math.pow(1 - t, 2))), delay: Math.round(420 - 250 * t), strength: 0.5 + t * 0.5 });
   }
   // l'hésitation : plus lente, pour le suspense
-  steps.push({ v: dip, delay: 760, strength: 0.7 });
-  if (Math.abs(score - dip) > 6) steps.push({ v: Math.round((score + dip) / 2) + r(-2, 2), delay: 620, strength: 0.8 });
-  steps.push({ v: score, delay: 680, strength: 1.1 });
+  steps.push({ v: dip, delay: 760, strength: 0.7, hes: true });
+  if (Math.abs(score - dip) > 6) steps.push({ v: Math.round((score + dip) / 2) + r(-2, 2), delay: 620, strength: 0.8, hes: true });
+  steps.push({ v: score, delay: 680, strength: 1.1, hes: true });
   return steps;
 }
 
@@ -574,8 +735,9 @@ function sparkles(md) {
 
 $('#run').addEventListener('click', runTest);
 document.querySelectorAll('[name="mode"]').forEach((el) => el.addEventListener('change', () => {
-  // Si un résultat est affiché, on garde les Mii et on recalcule tout de suite pour le nouveau mode
-  if (stage.classList.contains('running')) return runTest();
+  // Changer de mode ne lance rien : on efface le résultat affiché, les Mii restent en place
+  // (mêmes Mii = pas de nouvelle entrée en scène), et on attend « Tester ! ».
+  if (stage.classList.contains('running')) return showPicked();
   stage.classList.remove('amour', 'amitie');
   stage.classList.add(mode());
 }));

@@ -31,6 +31,13 @@ Puis ouvre http://localhost:5173/day-01-pulse/. Sur GitHub Pages, ça marche tel
 
 ## Versions
 
+### v1.2
+- **De la musique** : une petite boîte à musique accompagne le comptage, et sa mélodie monte avec le score. Elle passe en trémolo nerveux quand le compteur hésite. Le jingle de fin dépend du résultat : de la fanfare du coup de foudre au trombone raté sous 15 %. Tout est généré avec Web Audio.
+- **Des bulles de réaction** : après le résultat, chaque Mii dit une petite phrase au-dessus de sa tête, selon le score et le mode (« … », « Hmph ! », « Mon âme sœur ! »). Au-delà de 90 %, des cœurs ou des étoiles s'envolent. Les bulles suivent les Mii et restent dans l'écran.
+- **Des Mii vivants au repos** : en attendant le test, ils prennent des poses, changent d'expression, te regardent ou sautillent. Pendant le comptage, ils regardent le score.
+- **Correctif** : cliquer sur Amour ou Amitié ne lance plus le test, ça remet juste l'écran en attente.
+- Les fichiers du jour sont versionnés (`?v=…`) pour ne jamais afficher une ancienne version gardée en cache.
+
 ### v1.1
 - **Entrée en scène** : à chaque test, les deux Mii arrivent chacun de son bord de l'écran en trottinant, puis se tournent l'un vers l'autre, comme dans Tomodachi Life.
 - **Un compteur qui hésite** : le pourcentage dépasse le vrai score, redescend, hésite, puis s'arrête. Pour un très mauvais score, il monte bien haut avant de s'effondrer.
