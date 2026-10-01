@@ -1,31 +1,25 @@
-# Jour 02 · Loop
+# Jour 02 · Loop · Téléphone traduit
 
-**Gratte la Boucle** : un petit jeu de tickets à gratter incrémental en pixel art, inspiré de *Scritchy Scratchy*, fait avec [Phaser 3](https://phaser.io).
+Le téléphone arabe, version traducteurs automatiques. Tu écris une phrase en français, elle fait le tour des langues de ta boucle (français → anglais → japonais → russe → arabe → français), et elle revient… pas tout à fait pareille.
 
 ## Le lien avec « Loop »
 
-Le jeu *est* une boucle, et il le dit franchement :
-
-- **La boucle de jeu** : acheter un ticket, le gratter, encaisser, en racheter un. Les petites phrases en bas de l'écran le rappellent (« Encore un. Juste un. »).
-- **Le symbole ∞** : trois ∞ sur un ticket, et le ticket se **rejoue tout seul**, gratuitement. Le ticket Ouroboros (le serpent qui se mord la queue) en contient beaucoup plus.
-- **Recommencer la boucle** : après 1 000 € gagnés, on peut tout remettre à zéro. Le compteur « Boucle n° » augmente, et chaque recommencement donne un bonus de gains permanent. Le ticket Ouroboros se débloque à la boucle n°2.
-- **Le Gratt-o-bot** finit par jouer la boucle à ta place : il achète, gratte, recommence… sans toi.
+- La phrase suit littéralement une **boucle** : les langues sont posées en cercle, reliées par des flèches, et la traduction revient toujours au point de départ.
+- **Encore un tour** relance la boucle avec la phrase déjà déformée. On voit la dérive s'accumuler tour après tour, avec un score de « fidélité » à la phrase d'origine.
+- C'est toi qui construis la boucle : clique sur une langue du bac pour l'ajouter, clique sur une langue de la boucle pour la renvoyer dans le bac, ou glisse-les pour choisir leur place.
 
 ## Comment c'est codé
 
-Tout est dans [`game.js`](game.js), une seule scène Phaser, sans image ni son à charger :
+HTML, CSS et JS, sans librairie ([`app.js`](app.js)).
 
-- **Pixel art généré** : les symboles (pièce, anneau, flèche, étoile, ∞) et le robot sont décrits en petites grilles de caractères, transformées en textures avec `textures.generate` (palette Arne16 de Phaser).
-- **Le grattage** : la couche argentée est une `RenderTexture`. À chaque mouvement de souris, on « efface » un pinceau rond le long du trait (`erase`). Chaque case a 16 points de contrôle : quand 11 sont grattés, la case se découvre entièrement.
-- **Le tirage** : un ticket est gagnant selon une probabilité (augmentée par l'amélioration Trèfle). Le symbole gagnant est tiré selon des poids, et les autres cases sont remplies sans jamais faire un second triplé.
-- **Le robot** suit un chemin en zigzag sur les rangées et gratte avec le même code que la souris.
-- **Le son** est créé à la volée avec Web Audio : bruit filtré pour le grattage, petites mélodies pour les gains et la boucle.
-- **La sauvegarde** se fait dans le `localStorage` : argent, améliorations, numéro de boucle, nombre de tickets.
+- **Ajouter, retirer, réordonner** : au clic, la langue change de place. Au glisser, la position d'insertion est déduite de l'angle du curseur autour du centre. Les déplacements sont animés avec la technique FLIP : on mesure avant et après, puis on anime l'écart.
+- **La traduction** passe par une cascade de moteurs gratuits, appelés directement depuis le navigateur du visiteur. Il n'y a ni serveur ni clé, donc ça marche sur GitHub Pages. Pour chaque étape, on essaie dans l'ordre :
+  1. **Chrome** : la traduction intégrée au navigateur (Translator API), illimitée et calculée sur l'appareil, utilisée seulement si le modèle de langue est déjà installé ;
+  2. **Google Traduction**, par son adresse publique non officielle ;
+  3. **MyMemory** : 5 000 mots par jour et par visiteur.
 
-## Bonus : Téléphone traduit
-
-Une deuxième idée pour « Loop » : une phrase qui fait le tour des langues et revient déformée, avec une boucle de langues que tu construis toi-même. À voir dans [`telephone/`](telephone/).
-
-## Jouer
-
-Ouvre la page depuis l'accueil du Devtober, ou lance un petit serveur local à la racine du repo et ouvre `day-02-loop/`. Ça marche à la souris et au doigt.
+  Si un moteur échoue, met plus de 7 secondes, ou renvoie la phrase sans l'avoir traduite, le suivant prend le relais. Chaque puce indique en petit le moteur qui a fait sa traduction.
+- **L'animation** : la flèche en cours devient orange et ses tirets défilent dans le sens du voyage, pendant que la traduction arrive.
+- **Responsive** : sur grand écran, les langues sont posées sur une ellipse qui grandit avec leur nombre. Sur téléphone, la boucle devient une piste en deux colonnes (on descend à droite, on remonte à gauche), et le résultat s'affiche en dessous. Les flèches sont des courbes calculées d'une puce à la suivante, et elles s'arrêtent avant de toucher les bords.
+- **La fidélité** compte la part des mots de la phrase d'origine qui ont survécu au voyage.
+- **La sauvegarde** : ta boucle est gardée dans le `localStorage`.

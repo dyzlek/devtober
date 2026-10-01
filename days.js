@@ -12,11 +12,7 @@ export const WORDS = [
 /** Jours publiés : numéro → titre et phrase d'accroche affichés sur l'accueil (+ projets bonus dans `extras`). */
 export const PUBLISHED = {
   1: { title: "Testeur d'affinité", pitch: 'Des Mii en 3D, une 3DS, et un cœur qui bat de plus en plus vite.' },
-  2: {
-    title: 'Gratte la Boucle', pitch: 'Acheter, gratter, recommencer. Trois ∞ et le ticket se rejoue tout seul.',
-    // projets en plus pour le même jour : chacun a son sous-dossier (avec index.html + README.md)
-    extras: [{ path: 'telephone', title: 'Téléphone traduit', pitch: 'Une phrase fait le tour des langues et revient déformée.' }],
-  },
+  2: { title: 'Téléphone traduit', pitch: 'Une phrase fait le tour des langues et revient… un peu déformée.' },
 };
 
 export const slugOf = (n) => `day-${String(n).padStart(2, '0')}-${WORDS[n - 1].toLowerCase()}`;
