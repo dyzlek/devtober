@@ -18,7 +18,10 @@ const bodies = {};         // { m: gltf, f: gltf }
 export async function initMii() {
   const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
   const [f] = await Promise.all([
-    FFL.initWithResource(fetch('assets/FFLResHigh.dat'), globalThis.ModuleFFL),
+    // On lit tout le fichier avant de le donner à FFL : GitHub Pages l'envoie compressé (gzip),
+    // et FFL réserverait sinon la mémoire d'après la taille compressée (trop petite).
+    fetch('assets/FFLResHigh.dat').then((r) => r.arrayBuffer())
+      .then((buf) => FFL.initWithResource(new Uint8Array(buf), globalThis.ModuleFFL)),
     loader.loadAsync('assets/miiBodyM_wiiu.glb').then((g) => { bodies.m = g; }),
     loader.loadAsync('assets/miiBodyF_wiiu.glb').then((g) => { bodies.f = g; }),
   ]);
