@@ -1,10 +1,11 @@
 // Le cadre commun : accueil (grille des 31 jours) + page d'un jour (iframe, navigation, README).
-import { DAYS, statusOf } from '../days.js';
+import { DAYS, statusOf } from '../days.js?v=3';
 
 const $ = (s) => document.querySelector(s);
 const pad = (n) => String(n).padStart(2, '0');
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const LABELS = { done: 'Publié', today: "Aujourd'hui", upcoming: 'À venir', missed: 'Passé' };
+const VERSION = Date.now().toString(36);
 const dateFmt = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long' });
 
 /* ---------- Accueil ---------- */
@@ -48,11 +49,13 @@ function showDay(day, path = '') {
   if (day.entry) {
     $('#empty').hidden = true;
     frame.hidden = false;
+    // ?v=… : une adresse nouvelle à chaque visite, pour ne jamais afficher une vieille version en cache
     const src = `${day.slug}/${project.path ? project.path + '/' : ''}index.html`;
-    if (!frame.src.endsWith(src)) frame.src = src;
+    if (frame.dataset.page !== src) { frame.dataset.page = src; frame.src = `${src}?v=${VERSION}`; }
   } else {
     frame.hidden = true;
     frame.removeAttribute('src');
+    delete frame.dataset.page;
     const st = statusOf(day);
     $('#empty').hidden = false;
     $('.empty-num').textContent = `Jour ${pad(day.number)} · ${dateFmt.format(day.date)}`;
@@ -98,7 +101,7 @@ function route() {
   $('#bar').hidden = !day;
   document.body.classList.toggle('in-day', !!day);
   if (day) showDay(day, path);
-  else { document.title = 'Devtober 2026'; $('#frame').removeAttribute('src'); current = null; }
+  else { document.title = 'Devtober 2026'; $('#frame').removeAttribute('src'); delete $('#frame').dataset.page; current = null; }
 }
 window.addEventListener('hashchange', route);
 renderHome();
