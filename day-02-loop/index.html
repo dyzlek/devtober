@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gratte la Boucle</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root { --bg: #14172b; color-scheme: dark; }
+    html, body { margin: 0; height: 100%; background: var(--bg); overflow: hidden; }
+    #game { position: fixed; inset: 0; display: grid; place-items: center; }
+    #game canvas { image-rendering: pixelated; touch-action: none; }
+    .loading { position: fixed; inset: 0; display: grid; place-items: center; color: #8a90b8; font: 600 18px "Pixelify Sans", monospace; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js"></script>
+</head>
+<body>
+  <p class="loading" id="loading">Chargement…</p>
+  <div id="game"></div>
+  <script src="game.js"></script>
+</body>
+</html>
