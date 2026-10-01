@@ -12,6 +12,7 @@ export const WORDS = [
 /** Jours publiés : numéro → titre et phrase d'accroche affichés sur l'accueil. */
 export const PUBLISHED = {
   1: { title: "Testeur d'affinité", pitch: 'Des Mii en 3D, une 3DS, et un cœur qui bat de plus en plus vite.' },
+  2: { title: 'Gratte la Boucle', pitch: 'Acheter, gratter, recommencer. Trois ∞ et le ticket se rejoue tout seul.' },
 };
 
 export const slugOf = (n) => `day-${String(n).padStart(2, '0')}-${WORDS[n - 1].toLowerCase()}`;
