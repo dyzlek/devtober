@@ -330,6 +330,51 @@ export class MiiScene {
 
   /** Revient à la position neutre (face à face). */
   calm() { this.mood = null; }
+
+  /** Pendant le comptage : ils se tournent un peu vers nous pour regarder le score. */
+  watch() { this.mood = { x: 8.6, turn: 0.16, lean: 0, shake: 0, hop: 0 }; }
+
+  /**
+   * Vie au repos (avant le test) : de temps en temps, chaque Mii prend une pose,
+   * change d'expression, regarde vers nous ou fait un petit saut.
+   */
+  lively(on) {
+    this.alive = on;
+    const t = this.clock.elapsedTime;
+    this.actors.forEach((a, i) => {
+      // on annule une action en cours (sinon un Mii resterait figé dans une pose pendant le test)
+      if (a.backToWait) a.play('Wait');
+      a.backToWait = a.exprBack = a.glanceUntil = a.hopUntil = 0;
+      a.nextAct = t + 2 + i * 1.3 + Math.random() * 2;
+    });
+  }
+
+  idleAction(a, t) {
+    const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+    const kind = pick(['pose', 'pose', 'face', 'glance', 'hop']);
+    if (kind === 'pose') {
+      a.play(pick(['Pose.01', 'Pose.03', 'Pose.04', 'Pose.06', 'Pose.08']));
+      a.backToWait = t + 2.4;
+    } else if (kind === 'face') {
+      a.setExpression(pick([EXPR.SMILE, EXPR.HAPPY, EXPR.SURPRISE_OPEN_MOUTH]));
+      a.exprBack = t + 1.4;
+    } else if (kind === 'glance') {
+      a.glanceUntil = t + 1.8;
+    } else {
+      a.hopUntil = t + 0.45;
+    }
+    a.nextAct = t + 3 + Math.random() * 3.5;
+  }
+
+  /** Position à l'écran (en %) juste au-dessus de la tête de chaque Mii, pour les bulles. */
+  headScreen() {
+    const box = new THREE.Box3(), v = new THREE.Vector3();
+    return this.actors.map((a) => {
+      box.setFromObject(a.head);
+      v.set((box.min.x + box.max.x) / 2, box.max.y + 0.6, (box.min.z + box.max.z) / 2).project(this.camera);
+      return { x: (v.x + 1) * 50, y: (1 - v.y) * 50 };
+    });
+  }
   play(name) { this.actors.forEach((a) => a.play(name)); }
   beat() { this.bump = 1; }
 
@@ -351,12 +396,20 @@ export class MiiScene {
         a.root.rotation.y = -a.side * (1.25 - 0.83 * Math.max(0, (p - 0.75) / 0.25));
         if (p >= 1) { a.walk = null; a.root.position.y = 0; a.root.rotation.z = 0; }
       } else if (this.duo && a.side) {
-        const m = this.mood ?? { x: 8.6, turn: 0.42, lean: 0, shake: 0, hop: 0 };
+        // vie au repos
+        if (this.alive && !this.mood) {
+          if (t > (a.nextAct ?? Infinity)) this.idleAction(a, t);
+          if (a.backToWait && t > a.backToWait) { a.backToWait = 0; a.play('Wait'); }
+          if (a.exprBack && t > a.exprBack) { a.exprBack = 0; a.setExpression(a.idleExpr); }
+        }
+        const base = this.mood ?? { x: 8.6, turn: 0.42, lean: 0, shake: 0, hop: 0 };
+        const m = !this.mood && t < (a.glanceUntil ?? 0) ? { ...base, turn: 0.05 } : base;
         const ease = 1 - Math.exp(-dt * 5);   // transition douce vers la nouvelle pose
         const tx = a.side * m.x + Math.sin(t * 40 + a.side) * m.shake * 0.12;
-        const ty = Math.abs(Math.sin(t * 7 + (a.side > 0 ? 1.2 : 0))) * m.hop * 1.4;
+        const ty = Math.abs(Math.sin(t * 7 + (a.side > 0 ? 1.2 : 0))) * m.hop * 0.8;
         a.root.position.x += (tx - a.root.position.x) * ease;
         a.root.position.y += (ty - a.root.position.y) * ease * 2;
+        if (!this.mood && t < (a.hopUntil ?? 0)) a.root.position.y = Math.sin(((a.hopUntil - t) / 0.45) * Math.PI) * 0.9;
         a.root.rotation.y += (-a.side * m.turn - a.root.rotation.y) * ease;
         a.root.rotation.z += (a.side * -m.lean - a.root.rotation.z) * ease;
       }
