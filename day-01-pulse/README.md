@@ -29,6 +29,16 @@ python -m http.server 5173
 
 Puis ouvre http://localhost:5173/day-01-pulse/. Sur GitHub Pages, ça marche tel quel.
 
+## Versions
+
+### v1.1
+- **Entrée en scène** : à chaque test, les deux Mii arrivent chacun de son bord de l'écran en trottinant, puis se tournent l'un vers l'autre, comme dans Tomodachi Life.
+- **Un compteur qui hésite** : le pourcentage dépasse le vrai score, redescend, hésite, puis s'arrête. Pour un très mauvais score, il monte bien haut avant de s'effondrer.
+- **Des scores plus extrêmes** : avant, les résultats restaient presque toujours entre 30 et 89 %. Le score est maintenant étiré par une courbe qui le pousse vers les extrêmes. Environ un couple sur cinq tombe sous 20 %, et presque autant dépasse 80 %.
+
+### v1.0
+- Première version : la 3DS, les Mii en 3D (FFL.js + corps Wii U), le Mii Maker, le battement de cœur, la capture de l'écran du haut.
+
 ## Crédits et licences
 
 - `lib/ffl/` : FFL.js par ariankordi, sous licence AGPL-3.0 (voir `lib/ffl/LICENSE`).
