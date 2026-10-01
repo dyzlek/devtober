@@ -52,6 +52,7 @@ h1 span { color: var(--muted); font-weight: 500; }
 .word { font-family: "Space Grotesk", sans-serif; font-weight: 700; font-size: 1.6rem; letter-spacing: -.02em; }
 .title { font-weight: 700; margin-top: 6px; }
 .pitch, .date { color: var(--muted); font-size: .88rem; line-height: 1.4; }
+.more { margin-top: 6px; font-size: .8rem; font-weight: 700; color: var(--accent); }
 .badge {
   position: absolute; top: 14px; right: 14px; font-size: .72rem; font-weight: 700; padding: 3px 9px; border-radius: 99px;
   background: var(--line); color: var(--muted);
@@ -70,6 +71,10 @@ h1 span { color: var(--muted); font-weight: 500; }
 .crumbs span { color: var(--line); }
 .crumbs strong { overflow: hidden; text-overflow: ellipsis; }
 .bar-actions { display: flex; gap: 6px; }
+.switch { display: flex; gap: 4px; padding: 3px; border: 1.5px solid var(--line); border-radius: 12px; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.switch a { padding: 6px 12px; border-radius: 9px; font-weight: 600; font-size: .88rem; text-decoration: none; color: var(--muted); white-space: nowrap; }
+.switch a:hover { color: var(--ink); }
+.switch a[aria-current] { background: var(--ink); color: var(--bg); }
 .nav-btn {
   width: 38px; height: 38px; display: grid; place-items: center; border-radius: 10px; border: 1.5px solid var(--line);
   background: var(--surface); color: var(--ink); cursor: pointer; text-decoration: none;
@@ -109,5 +114,7 @@ h1 span { color: var(--muted); font-weight: 500; }
   .word { font-size: 1.25rem; }
   .badge { position: static; justify-self: start; margin-top: 6px; }
   .pitch { display: none; }
+  .crumbs strong { display: none; }
+  .switch a { padding: 6px 9px; font-size: .8rem; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }

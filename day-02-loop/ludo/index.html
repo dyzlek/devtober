@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ludo des Mii</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=3">
+
+  <!-- Moteur Mii (FFL.js) et ressources partagés avec le jour 1 -->
+  <script src="../../day-01-pulse/lib/ffl/ffl-emscripten-single-file.cjs"></script>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://esm.sh/three@0.180.0",
+        "three/": "https://esm.sh/three@0.180.0/",
+        "three/addons/": "https://esm.sh/three@0.180.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="i-sound" viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></symbol>
+      <symbol id="i-mute" viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="m22 9-6 6"/><path d="m16 9 6 6"/></symbol>
+      <symbol id="i-fast" viewBox="0 0 24 24"><path d="m13 19 9-7-9-7v14z"/><path d="m2 19 9-7-9-7v14z"/></symbol>
+      <symbol id="i-restart" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.7 9.7 0 0 0-6.7 2.7L3 8"/><path d="M3 3v5h5"/></symbol>
+      <symbol id="i-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+      <symbol id="i-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+    </defs>
+  </svg>
+
+  <main class="page">
+    <p class="kicker">Devtober · Jour 02 · <strong>Loop</strong> · Ludo des Mii</p>
+
+    <div class="ds-wrap">
+      <div class="ds">
+        <!-- ===== Couvercle : la table en 3D ===== -->
+        <div class="lid">
+          <span class="cam" aria-hidden="true"></span>
+          <span class="speaker l" aria-hidden="true"></span>
+          <div class="bezel-top">
+            <div class="screen-top">
+              <canvas id="board" aria-label="Plateau de Ludo en 3D"></canvas>
+              <div id="film" class="film"><p id="caption" class="caption" aria-live="polite"></p></div>
+              <p id="loading" class="loading-top">Installation de la table…</p>
+            </div>
+          </div>
+          <span class="speaker r" aria-hidden="true"></span>
+          <span class="slider3d" aria-hidden="true"><i></i></span>
+        </div>
+
+        <div class="hinge" aria-hidden="true"></div>
+
+        <!-- ===== Base : le dé ===== -->
+        <div class="base">
+          <div class="side left" aria-hidden="true">
+            <span class="circle-pad"><i></i></span>
+            <span class="dpad"><span class="d-up"></span><span class="d-left"></span><span class="d-right"></span><span class="d-down"></span></span>
+          </div>
+
+          <div class="center">
+            <div class="bezel-bottom">
+              <section class="touch" aria-label="Le dé et les commandes">
+                <div id="players" class="players"></div>
+                <div id="tray" class="tray" role="button" tabindex="0" aria-label="Lancer le dé">
+                  <canvas id="dice"></canvas>
+                  <p id="tray-hint" class="tray-hint" hidden>Touche le dé pour lancer</p>
+                </div>
+                <p id="status" class="status" aria-live="polite"></p>
+                <div class="row">
+                  <div id="choices" class="choices" aria-label="Choisir un pion"></div>
+                  <div class="tools">
+                    <button id="fast" type="button" class="icon-btn" aria-pressed="false" title="Bots rapides" aria-label="Bots rapides"><svg class="ic"><use href="#i-fast"/></svg></button>
+                    <button id="mute" type="button" class="icon-btn" aria-pressed="false" title="Son" aria-label="Couper le son"><svg class="ic"><use href="#i-sound"/></svg></button>
+                    <button id="restart" type="button" class="icon-btn" title="Nouvelle partie" aria-label="Nouvelle partie"><svg class="ic"><use href="#i-restart"/></svg></button>
+                  </div>
+                </div>
+
+                <!-- Écran de départ -->
+                <div id="start" class="start">
+                  <h2>Ludo des Mii</h2>
+                  <p>Choisis ton Mii et ceux des bots, puis fais le tour du plateau avant eux.</p>
+                  <div id="lineup" class="lineup"></div>
+                  <button id="shuffle" type="button" class="link-btn">Bots au hasard</button>
+                  <button id="play" type="button" class="big-btn" disabled>Chargement…</button>
+                </div>
+              </section>
+            </div>
+            <div class="sys-btns" aria-hidden="true"><span>SELECT</span><span class="home">HOME</span><span>START</span></div>
+          </div>
+
+          <div class="side right" aria-hidden="true">
+            <span class="abxy"><span class="b-x">X</span><span class="b-y">Y</span><span class="b-a">A</span><span class="b-b">B</span></span>
+            <span class="power"><i></i>POWER</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script type="module" src="game.js?v=15"></script>
+</body>
+</html>
