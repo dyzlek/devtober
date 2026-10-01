@@ -13,7 +13,7 @@ Toutes les créations sont jouables depuis la page d'accueil du repo, publiée s
 | Jour | Mot | Projet |
 | --- | --- | --- |
 | 01 | Pulse | [Testeur d'affinité](day-01-pulse/) |
-| 02 | Loop | [Gratte la Boucle](day-02-loop/) |
+| 02 | Loop | [Gratte la Boucle](day-02-loop/) · bonus : [Téléphone traduit](day-02-loop/telephone/) |
 | 03 | Bloom |  |
 | 04 | Drift |  |
 | 05 | Chaos |  |
@@ -79,6 +79,8 @@ Le tout est en HTML/CSS/JS, sans build. Les README sont convertis avec [marked](
 1. Crée le dossier `day-XX-mot/` avec un `index.html` et un `README.md`.
 2. Ajoute le jour dans `PUBLISHED` (fichier `days.js`), avec un titre et une phrase d'accroche.
 3. Ajoute le lien dans le tableau ci-dessus.
+
+Un jour peut avoir plusieurs projets : mets chaque projet bonus dans un sous-dossier (avec son `index.html` et son `README.md`), puis ajoute-le dans `extras` pour ce jour. Un sélecteur apparaît alors dans la barre du haut (`#/day-02-loop/telephone`).
 
 ## Lancer en local
 

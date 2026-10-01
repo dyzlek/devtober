@@ -17,6 +17,7 @@ function renderHome() {
       <span class="num">${pad(d.number)}</span>
       <span class="word">${d.word}</span>
       ${d.entry ? `<span class="title">${esc(d.entry.title)}</span><span class="pitch">${esc(d.entry.pitch)}</span>` : `<span class="date">${dateFmt.format(d.date)}</span>`}
+      ${d.projects.length > 1 ? `<span class="more">+ ${d.projects.slice(1).map((p) => esc(p.title)).join(', ')}</span>` : ''}
       <span class="badge ${st}">${LABELS[st]}</span>`;
     return `<li class="card ${st}">${d.entry ? `<a href="#/${d.slug}">${inner}</a>` : `<div>${inner}</div>`}</li>`;
   }).join('');
@@ -24,9 +25,11 @@ function renderHome() {
 
 /* ---------- Page d'un jour ---------- */
 let current = null;
+let project = null;
 
-function showDay(day) {
+function showDay(day, path = '') {
   current = day;
+  project = day.projects.find((p) => p.path === path) ?? day.projects[0] ?? null;
   document.title = `${pad(day.number)} · ${day.word} · Devtober 2026`;
   $('#crumb-day').textContent = `${pad(day.number)} · ${day.word}`;
   const prev = DAYS[day.number - 2], next = DAYS[day.number];
@@ -36,11 +39,16 @@ function showDay(day) {
   }
   $('#readme-btn').hidden = !day.entry;
 
+  // plusieurs projets ce jour-là : un sélecteur dans la barre
+  const sw = $('#switch');
+  sw.hidden = day.projects.length < 2;
+  sw.innerHTML = day.projects.map((p) => `<a href="#/${day.slug}${p.path ? '/' + p.path : ''}" ${p === project ? 'aria-current="page"' : ''}>${esc(p.title)}</a>`).join('');
+
   const frame = $('#frame');
   if (day.entry) {
     $('#empty').hidden = true;
     frame.hidden = false;
-    const src = `${day.slug}/index.html`;
+    const src = `${day.slug}/${project.path ? project.path + '/' : ''}index.html`;
     if (!frame.src.endsWith(src)) frame.src = src;
   } else {
     frame.hidden = true;
@@ -58,18 +66,19 @@ let marked = null;
 async function openReadme() {
   if (!current?.entry) return;
   const dialog = $('#readme'), body = $('#readme-body');
-  $('#readme-title').textContent = `${pad(current.number)} · ${current.word}`;
+  $('#readme-title').textContent = `${pad(current.number)} · ${current.word} · ${project.title}`;
   body.innerHTML = '<p class="muted">Chargement…</p>';
   dialog.showModal();
   try {
     marked ??= (await import('https://cdn.jsdelivr.net/npm/marked@15/lib/marked.esm.js')).marked;
-    const md = await (await fetch(`${current.slug}/README.md`)).text();
+    const base = `${current.slug}/${project.path ? project.path + '/' : ''}`;
+    const md = await (await fetch(`${base}README.md`)).text();
     body.innerHTML = marked.parse(md);
     // liens et images relatifs : relatifs au dossier du jour (comme sur GitHub)
     body.querySelectorAll('a[href], img[src]').forEach((el) => {
       const attr = el.tagName === 'A' ? 'href' : 'src';
       const v = el.getAttribute(attr);
-      if (!/^([a-z]+:|#|\/)/i.test(v)) el.setAttribute(attr, `${current.slug}/${v}`);
+      if (!/^([a-z]+:|#|\/)/i.test(v)) el.setAttribute(attr, `${base}${v}`);
       if (el.tagName === 'A') { el.target = '_blank'; el.rel = 'noopener'; }
     });
   } catch {
@@ -82,13 +91,13 @@ $('#readme').addEventListener('click', (e) => { if (e.target === e.currentTarget
 
 /* ---------- Routage (#/day-01-pulse) ---------- */
 function route() {
-  const slug = location.hash.replace(/^#\/?/, '');
+  const [slug, path = ''] = location.hash.replace(/^#\/?/, '').split('/');
   const day = DAYS.find((d) => d.slug === slug);
   $('#home').hidden = !!day;
   $('#day').hidden = !day;
   $('#bar').hidden = !day;
   document.body.classList.toggle('in-day', !!day);
-  if (day) showDay(day);
+  if (day) showDay(day, path);
   else { document.title = 'Devtober 2026'; $('#frame').removeAttribute('src'); current = null; }
 }
 window.addEventListener('hashchange', route);
