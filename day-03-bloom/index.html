@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bloom · la boîte des Mii</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=1">
+
+  <!-- Moteur Mii (FFL.js) et ressources partagés avec le jour 1 -->
+  <script src="../day-01-pulse/lib/ffl/ffl-emscripten-single-file.cjs"></script>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://esm.sh/three@0.180.0",
+        "three/": "https://esm.sh/three@0.180.0/",
+        "three/addons/": "https://esm.sh/three@0.180.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="i-sound" viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></symbol>
+      <symbol id="i-mute" viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="m22 9-6 6"/><path d="m16 9 6 6"/></symbol>
+      <symbol id="i-laser" viewBox="0 0 24 24"><path d="M4 20 12 4l8 16"/><path d="M12 4v16"/></symbol>
+      <symbol id="i-strobe" viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/></symbol>
+      <symbol id="i-ball" viewBox="0 0 24 24"><circle cx="12" cy="13" r="7"/><path d="M12 2v4M5 13h14M12 6c-3 3-3 11 0 14M12 6c3 3 3 11 0 14"/></symbol>
+      <symbol id="i-smoke" viewBox="0 0 24 24"><path d="M3 15c2-2 4 2 6 0s4 2 6 0 4 2 6 0"/><path d="M3 10c2-2 4 2 6 0s4 2 6 0 4 2 6 0"/></symbol>
+      <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+    </defs>
+  </svg>
+
+  <main class="page">
+    <p class="kicker">Devtober · Jour 03 · <strong>Bloom</strong> · La boîte des Mii</p>
+
+    <div class="ds-wrap">
+      <div class="ds">
+        <!-- ===== Couvercle : la boîte de nuit ===== -->
+        <div class="lid">
+          <span class="cam" aria-hidden="true"></span>
+          <span class="speaker l" aria-hidden="true"></span>
+          <div class="bezel-top">
+            <div class="screen-top">
+              <canvas id="club" aria-label="La boîte de nuit en 3D"></canvas>
+              <div id="film" class="film">
+                <p id="caption" class="caption" aria-live="polite"></p>
+                <p id="rating" class="rating" aria-hidden="true"></p>
+              </div>
+              <p id="loading" class="loading-top">Les Mii font la queue à l'entrée…</p>
+            </div>
+          </div>
+          <span class="speaker r" aria-hidden="true"></span>
+          <span class="slider3d" aria-hidden="true"><i></i></span>
+        </div>
+
+        <div class="hinge" aria-hidden="true"></div>
+
+        <!-- ===== Base : la console du DJ ===== -->
+        <div class="base">
+          <div class="side left" aria-hidden="true">
+            <span class="circle-pad"><i></i></span>
+            <span class="dpad"><span class="d-up"></span><span class="d-left"></span><span class="d-right"></span><span class="d-down"></span></span>
+          </div>
+
+          <div class="center">
+            <div class="bezel-bottom">
+              <section class="touch" aria-label="Console du DJ">
+                <div class="meter">
+                  <span class="meter-label">Ambiance <b id="stage-name">Calme</b></span>
+                  <span class="meter-bar"><i id="meter-fill"></i></span>
+                  <span class="crowd"><b id="crowd">0</b> sur la piste</span>
+                </div>
+
+                <div class="deck">
+                  <button id="pad" type="button" class="pad" aria-label="Taper en rythme">
+                    <span class="pad-ring"></span>
+                    <span class="pad-text">Tape<br>en rythme</span>
+                  </button>
+                  <div class="side-panel">
+                    <p id="feedback" class="feedback" aria-live="polite">Tape sur chaque temps, au son du kick.</p>
+                    <div id="fx" class="fx"></div>
+                    <button id="drop" type="button" class="drop" disabled>DROP</button>
+                  </div>
+                </div>
+
+                <div class="bottom-row">
+                  <span class="combo">Combo <b id="combo">0</b></span>
+                  <button id="mute" type="button" class="icon-btn" aria-pressed="false" title="Son" aria-label="Couper le son"><svg class="ic"><use href="#i-sound"/></svg></button>
+                </div>
+
+                <!-- Écran d'entrée -->
+                <div id="start" class="start">
+                  <h2>La boîte des Mii</h2>
+                  <p>Tu es le DJ. Tape en rythme pour faire monter l'ambiance : la piste s'illumine, les Mii arrivent, et la fête éclot.</p>
+                  <button id="open" type="button" class="big-btn" disabled>Chargement…</button>
+                  <p class="small">Avec le son ! Espace ou clic pour taper.</p>
+                </div>
+              </section>
+            </div>
+            <div class="sys-btns" aria-hidden="true"><span>SELECT</span><span class="home">HOME</span><span>START</span></div>
+          </div>
+
+          <div class="side right" aria-hidden="true">
+            <span class="abxy"><span class="b-x">X</span><span class="b-y">Y</span><span class="b-a">A</span><span class="b-b">B</span></span>
+            <span class="power"><i></i>POWER</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script type="module" src="game.js?v=8"></script>
+</body>
+</html>
