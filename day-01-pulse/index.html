@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Testeur d'affinité</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@900&family=Nunito:wght@600;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+
+  <!-- FFL.js (moteur Mii) : module Emscripten classique, puis three.js via importmap -->
+  <script src="lib/ffl/ffl-emscripten-single-file.cjs"></script>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://esm.sh/three@0.180.0",
+        "three/": "https://esm.sh/three@0.180.0/",
+        "three/addons/": "https://esm.sh/three@0.180.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <!-- Icônes (sprite SVG) -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="i-heart" viewBox="0 0 24 24"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z"/></symbol>
+      <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8l-6.2 3.2L7 14.2 2 9.3l6.9-1L12 2z"/></symbol>
+      <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></symbol>
+      <symbol id="i-camera" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></symbol>
+      <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></symbol>
+      <symbol id="i-save" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></symbol>
+      <symbol id="i-open" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></symbol>
+      <symbol id="i-sound" viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></symbol>
+      <symbol id="i-mute" viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="m22 9-6 6"/><path d="m16 9 6 6"/></symbol>
+      <symbol id="i-dice" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8" cy="8" r="1.3" fill="currentColor"/><circle cx="16" cy="16" r="1.3" fill="currentColor"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/><circle cx="16" cy="8" r="1.3" fill="currentColor"/><circle cx="8" cy="16" r="1.3" fill="currentColor"/></symbol>
+      <symbol id="i-rot-l" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.7 9.7 0 0 0-6.7 2.7L3 8"/><path d="M3 3v5h5"/></symbol>
+      <symbol id="i-rot-r" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-9-9c2.5 0 4.9 1 6.7 2.7L21 8"/><path d="M21 3v5h-5"/></symbol>
+      <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></symbol>
+      <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+      <symbol id="i-file" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><path d="M14 2v6h6"/></symbol>
+      <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 0 0-16 0"/></symbol>
+      <symbol id="i-face" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01M15 9h.01"/></symbol>
+      <symbol id="i-hair" viewBox="0 0 24 24"><path d="M4 14C4 7 7.5 3 12 3s8 4 8 11"/><path d="M4 14c2-3 4-6 8-7 1 3 5 5 8 7"/><path d="M4 14v6M20 14v6"/></symbol>
+      <symbol id="i-brow" viewBox="0 0 24 24"><path d="M3 13c3-5 9-6 18-2"/><path d="M5 17c4-2 9-2 14 0" opacity=".45"/></symbol>
+      <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></symbol>
+      <symbol id="i-nose" viewBox="0 0 24 24"><path d="M12 3v10l-3.5 4c1 2.5 6 2.5 7 0"/></symbol>
+      <symbol id="i-mouth" viewBox="0 0 24 24"><path d="M3 12c3 5 15 5 18 0"/><path d="M3 12c3-2 6-2 9 0 3-2 6-2 9 0"/></symbol>
+      <symbol id="i-glasses" viewBox="0 0 24 24"><circle cx="6" cy="15" r="4"/><circle cx="18" cy="15" r="4"/><path d="M10 15c1-1 3-1 4 0M2 14l1.5-7M22 14l-1.5-7"/></symbol>
+      <symbol id="i-body" viewBox="0 0 24 24"><circle cx="12" cy="4.5" r="2.5"/><path d="M12 8v7M8 22l4-7 4 7M5 11h14"/></symbol>
+      <symbol id="i-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+      <symbol id="i-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+    </defs>
+  </svg>
+
+  <main class="page">
+    <p class="kicker">Devtober · Jour 01 · <strong>Pulse</strong></p>
+
+    <div class="ds-wrap">
+      <div class="ds">
+        <!-- ===== Couvercle (écran du haut) ===== -->
+        <div class="lid">
+          <span class="cam" aria-hidden="true"></span>
+          <span class="speaker l" aria-hidden="true"></span>
+          <div class="bezel-top">
+            <div class="screen-top frame">
+              <div id="stage" class="stage amour">
+                <svg class="heart" viewBox="0 0 100 92" aria-hidden="true"><path d=""/></svg>
+                <canvas id="stage-canvas" class="mii-canvas"></canvas>
+                <div id="overlay" class="overlay"><p class="placeholder">Chargement des Mii…</p></div>
+              </div>
+            </div>
+          </div>
+          <span class="speaker r" aria-hidden="true"></span>
+          <span class="slider3d" aria-hidden="true"><i></i></span>
+        </div>
+
+        <div class="hinge" aria-hidden="true"></div>
+
+        <!-- ===== Base (écran tactile + boutons) ===== -->
+        <div class="base">
+          <div class="side left" aria-hidden="true">
+            <span class="circle-pad"><i></i></span>
+            <span class="dpad"><span class="d-up"></span><span class="d-left"></span><span class="d-right"></span><span class="d-down"></span></span>
+          </div>
+
+          <div class="center">
+            <div class="bezel-bottom">
+              <section class="touch" aria-label="Choix des Mii">
+                <div class="duo">
+                  <button type="button" class="slot active" data-slot="0"><img alt=""><span class="slot-name">?</span></button>
+                  <div class="mode" role="radiogroup" aria-label="Type d'affinité">
+                    <label><input type="radio" name="mode" value="amour" checked><span><svg class="ic fill"><use href="#i-heart"/></svg>Amour</span></label>
+                    <label><input type="radio" name="mode" value="amitie"><span><svg class="ic fill"><use href="#i-star"/></svg>Amitié</span></label>
+                  </div>
+                  <button type="button" class="slot" data-slot="1"><img alt=""><span class="slot-name">?</span></button>
+                </div>
+                <p class="touch-hint" id="touch-hint">Touche un Mii pour le placer à gauche</p>
+                <ul id="grid" class="grid"></ul>
+                <div class="bar">
+                  <div class="tools">
+                    <button id="edit-sel" type="button" class="edit-pill" title="Modifier ce Mii" hidden><svg class="ic"><use href="#i-pencil"/></svg><span id="edit-name"></span></button>
+                    <button id="shot" type="button" class="icon-btn" title="Capture de l'écran du haut" aria-label="Capture de l'écran du haut"><svg class="ic"><use href="#i-camera"/></svg></button>
+                    <button id="export" type="button" class="icon-btn" title="Exporter mes Mii" aria-label="Exporter mes Mii"><svg class="ic"><use href="#i-save"/></svg></button>
+                    <label class="icon-btn" title="Importer des Mii" aria-label="Importer des Mii"><svg class="ic"><use href="#i-open"/></svg><input id="import" type="file" accept="application/json" hidden></label>
+                    <button id="mute" type="button" class="icon-btn" title="Son" aria-label="Couper le son" aria-pressed="false"><svg class="ic"><use href="#i-sound"/></svg></button>
+                  </div>
+                  <button id="run" type="button" class="big-btn" disabled>Tester !</button>
+                </div>
+              </section>
+            </div>
+            <div class="sys-btns" aria-hidden="true"><span>SELECT</span><span class="home">HOME</span><span>START</span></div>
+          </div>
+
+          <div class="side right" aria-hidden="true">
+            <span class="abxy"><span class="b-x">X</span><span class="b-y">Y</span><span class="b-a">A</span><span class="b-b">B</span></span>
+            <span class="power" aria-hidden="true"><i></i>POWER</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ================= Mii Maker ================= -->
+  <dialog id="maker" aria-labelledby="maker-title">
+    <form id="maker-form" method="dialog">
+      <header class="maker-head">
+        <h2 id="maker-title">Mii Maker</h2>
+        <button type="button" id="randomize" class="mini-btn"><svg class="ic"><use href="#i-dice"/></svg>Au hasard</button>
+      </header>
+      <div class="maker-body">
+        <div class="maker-preview">
+          <canvas id="preview-canvas"></canvas>
+          <div class="turn">
+            <button type="button" class="icon-btn" data-turn="-1" aria-label="Tourner à gauche"><svg class="ic"><use href="#i-rot-l"/></svg></button>
+            <button type="button" class="icon-btn" data-turn="1" aria-label="Tourner à droite"><svg class="ic"><use href="#i-rot-r"/></svg></button>
+          </div>
+        </div>
+        <div class="maker-panel">
+          <nav id="tabs" class="tabs" role="tablist"></nav>
+          <div id="panel" class="panel" role="tabpanel"></div>
+        </div>
+      </div>
+      <footer class="maker-foot">
+        <button type="button" id="delete" class="mini-btn danger"><svg class="ic"><use href="#i-trash"/></svg>Supprimer</button>
+        <span class="spacer"></span>
+        <button type="button" id="cancel" class="mini-btn">Annuler</button>
+        <button type="submit" class="big-btn small">Terminé</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status"></div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
