@@ -66,6 +66,6 @@ Les Mii réagissent aussi :
 - **Des réactions avec les bras** : applaudir, lever les bras, faire un « bien joué », croiser les bras, se prendre la tête. Les bras sont posés par-dessus l'animation du corps, comme dans les scènes du jour 1.
 - **Le lancer au doigt** : la vitesse et la direction du geste donnent la force et le sens du lancer.
 - **Ralenti sur les captures** : le jeu passe au ralenti, la caméra suit le pion mangé qui s'envole jusqu'à sa cour, avec une traînée de sa couleur.
-- **Quatre décors** ([`decor.js`](decor.js)) : le salon (bibliothèque, fenêtre), un pique-nique dans l'herbe (nappe à carreaux, arbres, fleurs, nuages), la plage (sable, mer qui ondule, parasol, palmiers) et la nuit (étoiles, guirlandes de lampions, lucioles). Le décor choisi est gardé pour la prochaine visite.
+- **Quatre décors** ([`decor.js`](decor.js)) : le salon (bibliothèque, fenêtre), un pique-nique dans l'herbe (nappe à carreaux, arbres, fleurs, nuages), la plage (sable, parasol, palmiers, serviette, ballon) et la nuit (étoiles, guirlandes de lampions, lucioles). Le décor choisi est gardé pour la prochaine visite.
 - **Multijoueur local** : sur l'écran de départ, touche « Toi », « Joueur » ou « Bot » au-dessus de chaque place pour la changer. De 0 à 4 vrais joueurs sur la même console. À chaque tour d'un joueur, l'écran du bas montre à qui passer la console, avec son Mii et sa couleur.
 - **Une petite pause** de 400 ms après chaque action des bots, pour mieux suivre la partie.

@@ -2,8 +2,8 @@
 // La boucle : chaque pion fait le tour complet du plateau (52 cases) avant de rentrer chez lui.
 import { initMii, randomMii, getName, setName, renderIcon, b64ToBytes, bytesToB64 } from '../../day-01-pulse/mii3d.js?v=3';
 import { affinity, relationOf } from './affinity.js?v=1';
-import { DECORS } from './decor.js?v=1';
-import { Board, COLORS, START, SAFE, LAST, GOAL, trackIndex } from './board.js?v=7';
+import { DECORS } from './decor.js?v=2';
+import { Board, COLORS, START, SAFE, LAST, GOAL, trackIndex } from './board.js?v=8';
 import { Dice } from './dice.js?v=6';
 
 const $ = (s) => document.querySelector(s);
