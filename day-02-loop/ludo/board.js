@@ -2,7 +2,8 @@
 // Le joueur ne contrôle jamais la caméra : un réalisateur choisit les plans tout seul.
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { MiiActor, useRenderer, EXPR } from '../../day-01-pulse/mii3d.js?v=2';
+import { MiiActor, useRenderer, EXPR } from '../../day-01-pulse/mii3d.js?v=3';
+import { buildDecor } from './decor.js?v=1';
 
 /* =====================================================================
    Le plateau de Ludo (grille 15 × 15)
@@ -174,7 +175,8 @@ export class Board {
     scene.environmentIntensity = 0.55;
 
     // lumière : une lampe au-dessus de la table + un peu d'ambiance chaude
-    scene.add(new THREE.HemisphereLight(0xffe9cc, 0x2a1d14, 0.55));
+    this.hemi = new THREE.HemisphereLight(0xffe9cc, 0x2a1d14, 0.55);
+    scene.add(this.hemi);
     const lamp = new THREE.SpotLight(0xfff1dc, 1300, 80, 0.75, 0.6, 2);
     lamp.position.set(2, 26, 4);
     lamp.castShadow = true;
@@ -182,15 +184,21 @@ export class Board {
     lamp.shadow.bias = -0.0004;
     lamp.shadow.camera.near = 5; lamp.shadow.camera.far = 50;
     scene.add(lamp, lamp.target);
+    this.lamp = lamp;
     const rim = new THREE.DirectionalLight(0xb9c8ff, 0.5);
     rim.position.set(-14, 9, -12);
     scene.add(rim);
+    this.rim = rim;
 
     this.buildTable();
     this.pawns = [];
     this.actors = [];
     this.anims = [];
+    this.trail = [];
     this.clock = new THREE.Clock();
+    this.now = 0;            // horloge du jeu (en ms) : elle ralentit pendant les ralentis
+    this.timeScale = 1;
+    this.decor = null;
     this.camera = new THREE.PerspectiveCamera(42, 1, 0.1, 260);
     this.director = new Director(this.camera);
     this.raycaster = new THREE.Raycaster();
@@ -218,6 +226,7 @@ export class Board {
     const rug = new THREE.Mesh(new THREE.CircleGeometry(24, 72), new THREE.MeshStandardMaterial({ color: 0x6e2a26, roughness: 0.95 }));
     rug.rotation.x = -Math.PI / 2; rug.position.y = FLOOR + 0.02; rug.receiveShadow = true;
     this.scene.add(floor, rug);
+    this.floor = floor; this.rug = rug; this.floorWood = floor.material.map;
     // une table ronde en bois, à hauteur de taille des Mii (ils restent debout autour, sans la traverser)
     const wood = woodTexture('#6b3f20', '#4a2a14', '#86532e');
     wood.repeat.set(2, 2); wood.anisotropy = r.capabilities.getMaxAnisotropy();
@@ -245,6 +254,14 @@ export class Board {
     });
     // anneau lumineux sous les pions jouables
     this.ringGeo = new THREE.TorusGeometry(0.42, 0.05, 12, 40);
+  }
+
+  /** Change le décor autour de la table : 'salon', 'picnic', 'plage' ou 'nuit'. */
+  setDecor(name) {
+    if (this.decor) { this.scene.remove(this.decor.group); this.decor.dispose?.(); }
+    this.decor = buildDecor(this, name);
+    this.scene.add(this.decor.group);
+    this.decorName = name;
   }
 
   /* ---------- Les Mii autour de la table, chacun derrière sa cour ---------- */
@@ -333,7 +350,7 @@ export class Board {
 
   /* ---------- Petites animations (promesses) ---------- */
   tween(dur, fn) {
-    return new Promise((resolve) => this.anims.push({ t0: performance.now(), dur: dur * 1000, fn, resolve }));
+    return new Promise((resolve) => this.anims.push({ t0: this.now, dur: dur * 1000, fn, resolve }));
   }
   slide(mesh, to, dur) {
     const from = mesh.position.clone();
@@ -349,14 +366,25 @@ export class Board {
     });
   }
   /** Le pion capturé est éjecté vers sa cour en tournoyant. */
-  fly(mesh, to, dur) {
+  fly(mesh, to, dur, color = 0xffffff) {
     const from = mesh.position.clone();
+    let last = -1;
     return this.tween(dur, (k) => {
       mesh.position.lerpVectors(from, to, k);
       mesh.position.y = from.y + Math.sin(k * Math.PI) * 4.5;
       mesh.rotation.z = k * Math.PI * 4;
+      // une petite traînée de bulles colorées derrière le pion
+      if (k - last > 0.025) { last = k; this.puff(mesh.position, color); }
     }).then(() => { mesh.rotation.z = 0; });
   }
+  puff(pos, color) {
+    const m = new THREE.Mesh(new THREE.SphereGeometry(0.22, 12, 8), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.8, depthWrite: false }));
+    m.position.copy(pos).y += 0.4;
+    this.scene.add(m);
+    this.trail.push({ m, born: this.now });
+  }
+  /** Ralenti : 1 = vitesse normale, 0.3 = trois fois plus lent. */
+  slowMo(scale) { this.timeScale = scale; }
 
   /* ---------- Les Mii ---------- */
   /** Chaque Mii (sauf `except`) se tourne un peu vers un point de la table. */
@@ -388,15 +416,25 @@ export class Board {
       lose: [EXPR.SORROW, 'Pose.07'], idle: [EXPR.SMILE, 'Wait'], none: [EXPR.SORROW, 'Pose.04'],
       laugh: [EXPR.HAPPY, 'Pose.06'], wow: [EXPR.SURPRISE_OPEN_MOUTH, 'Pose.01'], clap: [EXPR.SMILE, 'Pose.08'],
       worry: [EXPR.SORROW, 'Wait'], meh: [EXPR.NORMAL, 'Pose.04'],
+      // réactions avec les bras posés à la main (par-dessus l'animation du corps)
+      cheer: [EXPR.HAPPY, 'Wait', { l: [0.2, -0.45, 0.1, -0.9], r: [0.2, -0.45, 0.1, -0.9] }, true],
+      facepalm: [EXPR.SORROW, 'Wait', { l: [0.5, -0.35, 0.3, -2.1], r: [0.5, -0.35, 0.3, -2.1] }],
+      hmph: [EXPR.ANGER, 'Wait', { l: [1.45, 0.75, 1.7], r: [1.45, 0.75, 1.7] }],
+      goodjob: [EXPR.SMILE, 'Wait', { r: [0.6, -0.3, 0.2, -1.4] }],
+      applause: [EXPR.HAPPY, 'Wait', 'clap', true],
     }[kind];
     a.setExpression(table[0]);
     a.play(table[1]);
+    a.armPose = table[2] ? { arms: table[2], until: this.now + 2600 } : null;
+    a.hopUntil = table[3] ? this.now + 900 : 0;
     clearTimeout(a.backTimer);
     if (kind !== 'win' && kind !== 'lose') a.backTimer = setTimeout(() => { a.play('Wait'); a.setExpression(a.idleExpr); }, 2600);
   }
 
   tick() {
-    const dt = Math.min(this.clock.getDelta(), 0.1), t = this.clock.elapsedTime, now = performance.now();
+    const rdt = Math.min(this.clock.getDelta(), 0.1), dt = rdt * this.timeScale, t = this.clock.elapsedTime;
+    this.now += dt * 1000;
+    const now = this.now;
     this.anims = this.anims.filter((a) => {
       const k = Math.min(1, (now - a.t0) / a.dur);
       a.fn(k);
@@ -414,9 +452,23 @@ export class Board {
     this.actors.forEach((a) => {
       a.yaw += (a.targetYaw - a.yaw) * (1 - Math.exp(-dt * 4));
       a.root.rotation.set(0, a.yaw, 0);
+      a.root.position.y = FLOOR + (now < (a.hopUntil ?? 0) ? Math.abs(Math.sin((a.hopUntil - now) / 900 * Math.PI * 3)) * 0.9 : 0);
       a.update(dt, t);
+      if (a.armPose && now < a.armPose.until) {
+        const arms = a.armPose.arms === 'clap'   // applaudir : les mains se rejoignent devant, en rythme
+          ? (() => { const o = Math.sin(now / 1000 * 18) * 0.25; const v = [1.25, 0.45, 0.6 + o]; return { l: v, r: v }; })()
+          : a.armPose.arms;
+        a.pose(arms);
+      }
     });
-    this.director.update(dt, t);
+    this.trail = this.trail.filter((p) => {
+      const k = (now - p.born) / 600;
+      if (k >= 1) { this.scene.remove(p.m); p.m.geometry.dispose(); p.m.material.dispose(); return false; }
+      p.m.material.opacity = 0.8 * (1 - k); p.m.scale.setScalar(1 - k * 0.6);
+      return true;
+    });
+    this.decor?.update?.(rdt, t);
+    this.director.update(rdt, t);   // la caméra garde sa vitesse, même au ralenti
     this.renderer.render(this.scene, this.camera);
   }
 }

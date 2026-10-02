@@ -286,4 +286,38 @@ button { cursor: pointer; }
   .bezel-bottom { padding: 1.6cqw; border-radius: 2cqw; }
   .sys-btns span { font-size: 2.4cqw; padding: 1.4cqw 0; }
 }
+/* ---------- Places : joueur ou bot ---------- */
+button.seat-label { border: none; background: none; padding: .2cqw 1.2cqw; border-radius: 99px; font: inherit; font-size: .75em; font-weight: 900; color: var(--c); text-transform: uppercase; letter-spacing: .06em; cursor: pointer; }
+button.seat-label[aria-pressed="true"] { background: var(--c); color: #fff; }
+button.seat-label:hover { outline: .3cqw dashed var(--c); }
+
+/* ---------- À plusieurs : passer la console ---------- */
+.pass {
+  position: absolute; inset: 0; z-index: 6; display: grid; place-content: center; justify-items: center; gap: 1.6cqw; text-align: center;
+  background: repeating-linear-gradient(-45deg, var(--cream) 0 3cqw, var(--cream-2) 3cqw 6cqw);
+  border: 1.2cqw solid var(--c); border-radius: 1cqw;
+}
+.pass[hidden] { display: none; }
+.pass-label { margin: 0; font-weight: 900; color: #9a7a4a; text-transform: uppercase; letter-spacing: .08em; }
+.pass img { width: 18cqw; height: 18cqw; border-radius: 50%; background: color-mix(in srgb, var(--c) 25%, #fff); box-shadow: 0 0 0 1cqw var(--c); animation: passPop .5s cubic-bezier(.3, 1.8, .5, 1); }
+.pass-name { margin: 0; font-size: 1.5em; }
+.pass-name b { color: var(--c); font-weight: 900; }
+.pass-name span { font-size: .6em; font-weight: 800; color: #9a7a4a; }
+@keyframes passPop { from { transform: scale(.4); } }
+
+/* ---------- Sous la console : décor et animations ---------- */
+.extras {
+  width: min(100%, 880px); display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 26px; padding: 12px 14px 14px; border-radius: 22px;
+  background: repeating-linear-gradient(-45deg, var(--cream) 0 14px, var(--cream-2) 14px 28px); box-shadow: 0 4px 0 #ecdcae; color: var(--ink);
+}
+.extras-group { display: grid; justify-items: center; gap: 6px; }
+.extras-title { margin: 0; font-weight: 900; }
+.chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 7px; }
+.chips button {
+  padding: 7px 13px; border-radius: 99px; border: 3px solid #ecd9a0; background: #fff; color: #8a6420;
+  font: inherit; font-weight: 900; cursor: pointer; box-shadow: 0 3px 0 #ecdcae;
+}
+.chips button:hover { border-color: var(--pink); }
+.chips button:active { transform: translateY(2px); box-shadow: 0 1px 0 #ecdcae; }
+.chips button[aria-pressed="true"] { background: var(--pink); border-color: var(--pink); color: #fff; box-shadow: 0 3px 0 #c93a68; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
