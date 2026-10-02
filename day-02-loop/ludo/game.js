@@ -244,6 +244,7 @@ let vec;   // fabrique de Vector3 (fournie par board.js une fois chargé)
    Un tour de jeu
    ===================================================================== */
 const speed = (p) => (fast && !players[p].human ? 0.45 : 1);
+const BOT_PAUSE = 400;   // petit temps d'attente après chaque action d'un bot (lancer, choix, déplacement)
 
 async function play() {
   const id = ++gameId;
@@ -280,6 +281,7 @@ async function turn(p, id) {
   if (id !== gameId) return;
   board.react(p, 'roll');
   const roll = await dice.roll();
+  if (!pl.human) await wait(BOT_PAUSE);
   if (id !== gameId) return;
   status(`${who(p)} fait <b>${roll}</b>${roll === 6 ? ' !' : '.'}`);
   if (roll === 6) { sfx.six(); board.react(p, 'six'); say(p, 'six'); caption(`${who(p)} fait un 6 !`, 1500); }
@@ -292,7 +294,7 @@ async function turn(p, id) {
     say(p, 'none');
     status(`${who(p)} fait ${roll} : aucun pion ne peut bouger.`);
     if (!pl.human) shotFace(p);
-    await wait(1300 * k);
+    await wait(1300 * k + (pl.human ? 0 : BOT_PAUSE));
     return 'next';
   }
   let i;
@@ -308,11 +310,13 @@ async function turn(p, id) {
   } else {
     await wait(500 * k);
     i = botChoose(p, roll, moves);
+    await wait(BOT_PAUSE);
   }
   if (id !== gameId) return;
 
   // --- déplacer
   const { captured, finished } = await move(p, i, roll, k, id);
+  if (!pl.human) await wait(BOT_PAUSE);
   if (id !== gameId) return;
   renderPlayers();
 
