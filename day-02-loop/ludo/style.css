@@ -305,19 +305,4 @@ button.seat-label:hover { outline: .3cqw dashed var(--c); }
 .pass-name span { font-size: .6em; font-weight: 800; color: #9a7a4a; }
 @keyframes passPop { from { transform: scale(.4); } }
 
-/* ---------- Sous la console : décor et animations ---------- */
-.extras {
-  width: min(100%, 880px); display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 26px; padding: 12px 14px 14px; border-radius: 22px;
-  background: repeating-linear-gradient(-45deg, var(--cream) 0 14px, var(--cream-2) 14px 28px); box-shadow: 0 4px 0 #ecdcae; color: var(--ink);
-}
-.extras-group { display: grid; justify-items: center; gap: 6px; }
-.extras-title { margin: 0; font-weight: 900; }
-.chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 7px; }
-.chips button {
-  padding: 7px 13px; border-radius: 99px; border: 3px solid #ecd9a0; background: #fff; color: #8a6420;
-  font: inherit; font-weight: 900; cursor: pointer; box-shadow: 0 3px 0 #ecdcae;
-}
-.chips button:hover { border-color: var(--pink); }
-.chips button:active { transform: translateY(2px); box-shadow: 0 1px 0 #ecdcae; }
-.chips button[aria-pressed="true"] { background: var(--pink); border-color: var(--pink); color: #fff; box-shadow: 0 3px 0 #c93a68; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
