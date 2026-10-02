@@ -3,7 +3,7 @@
 import { initMii, randomMii, getName, setName, renderIcon, b64ToBytes, bytesToB64 } from '../../day-01-pulse/mii3d.js?v=3';
 import { affinity, relationOf } from './affinity.js?v=1';
 import { DECORS } from './decor.js?v=2';
-import { Board, COLORS, START, SAFE, LAST, GOAL, trackIndex } from './board.js?v=8';
+import { Board, COLORS, START, SAFE, LAST, GOAL, trackIndex } from './board.js?v=9';
 import { Dice } from './dice.js?v=6';
 
 const $ = (s) => document.querySelector(s);
@@ -615,31 +615,11 @@ function preview() {
   shotOverview();
 }
 
-/* =====================================================================
-   La barre sous la console : le décor et les animations des Mii
-   ===================================================================== */
+/** Le décor autour de la table (gardé d'une visite à l'autre). */
 function setDecor(id) {
   board.setDecor(id);
   try { localStorage.setItem(DECOR_STORE, id); } catch { /* rien */ }
-  document.querySelectorAll('#decors button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.decor === id)));
 }
-$('#decors').innerHTML = DECORS.map((d) => `<button type="button" data-decor="${d.id}" aria-pressed="false">${d.name}</button>`).join('');
-$('#decors').addEventListener('click', (e) => {
-  const b = e.target.closest('[data-decor]');
-  if (b) { sfx.init(); sfx.turn(); setDecor(b.dataset.decor); }
-});
-const ANIMS = [
-  ['applause', 'Applaudir', 'goodjob'], ['cheer', 'Hourra', 'six'], ['goodjob', 'Bien joué', 'goodjob'],
-  ['hmph', 'Hmph', 'taunt'], ['facepalm', 'Oh non…', 'sad'], ['laugh', 'Rire', 'laughAt'], ['wow', 'Surprise', 'watchCapture'],
-];
-$('#anims').innerHTML = ANIMS.map(([id, label]) => `<button type="button" data-anim="${id}">${label}</button>`).join('');
-$('#anims').addEventListener('click', (e) => {
-  const b = e.target.closest('[data-anim]');
-  if (!b || !board) return;
-  const [id, , line] = ANIMS.find(([x]) => x === b.dataset.anim);
-  sfx.init(); sfx.turn();
-  players.forEach((_, q) => setTimeout(() => { board.react(q, id); say(q, line, 1800); }, q * 150));
-});
 
 /* =====================================================================
    Démarrage
