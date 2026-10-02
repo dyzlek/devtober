@@ -425,25 +425,6 @@ dialog::backdrop { background: rgba(20, 25, 30, .55); backdrop-filter: blur(3px)
 @keyframes pop { 0% { scale: 1.6; } 100% { scale: 1; } }
 @keyframes verdict { to { opacity: 1; transform: scale(1); } }
 @keyframes float { from { opacity: 1; transform: translateY(0) scale(.6); } to { opacity: 0; transform: translateY(-14cqw) scale(1.2); } }
-/* ---------- Les boutons des scènes (sous la console) ---------- */
-.scenes {
-  width: min(100%, 880px); display: grid; justify-items: center; gap: 8px; padding: 12px 14px 14px; border-radius: 22px;
-  background: repeating-linear-gradient(-45deg, var(--cream) 0 14px, var(--cream-2) 14px 28px); box-shadow: 0 4px 0 #ecdcae;
-}
-.scenes-title { margin: 0; font-weight: 900; color: var(--ink); letter-spacing: .02em; }
-.scenes-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
-.scenes-row button {
-  min-width: 56px; padding: 8px 10px; border-radius: 99px; border: 3px solid #ecd9a0; background: #fff; color: #8a6420;
-  font: inherit; font-weight: 900; cursor: pointer; box-shadow: 0 3px 0 #ecdcae;
-}
-.scenes-row button small { font-size: .75em; margin-left: 1px; }
-.scenes-row button:hover { border-color: var(--pink); }
-.scenes-row button[aria-pressed="true"] { background: var(--pink); border-color: var(--pink); color: #fff; box-shadow: 0 3px 0 #c93a68; }
-@media (max-width: 640px) {
-  .scenes-row { display: grid; grid-template-columns: repeat(5, 1fr); width: 100%; }
-  .scenes-row button { min-width: 0; }
-}
-
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
 }

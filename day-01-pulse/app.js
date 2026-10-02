@@ -322,7 +322,6 @@ $('#grid').addEventListener('click', (e) => {
 /** Avant le test : les Mii choisis attendent sur l'écran du haut. */
 function showPicked() {
   runToken++;
-  clearSceneButtons();
   music.stop();
   stage.className = `stage ${mode()}`;
   heart.classList.remove('alive');
@@ -589,7 +588,6 @@ function runTest() {
   const md = mode();
   const r = compat(a, b, md);
   const token = ++runToken;
-  clearSceneButtons();
   music.stop();
 
   stage.className = `stage ${md} running`;
@@ -660,35 +658,6 @@ function afterResult(score, token) {
     });
   }, score >= 15 ? 1700 : 2700);   // le trombone raté est plus long
 }
-
-/* ---------- Les scènes : un bouton par palier de 10 %, pour les voir sans faire de test ---------- */
-function showScene(tier) {
-  const ids = picked.every(Boolean) ? picked : miis.slice(0, 2).map((m) => m.id);
-  const a = miis.find((m) => m.id === ids[0]), b = miis.find((m) => m.id === ids[1]);
-  if (!a || !b) return toast('Il faut deux Mii pour voir les scènes');
-  const md = mode(), score = tier === 9 ? 95 : tier * 10 + 5;
-  const token = ++runToken;
-  music.stop();
-  clearBubbles();
-  stage.className = `stage ${md} running`;
-  heart.querySelector('path').setAttribute('d', SHAPES[md]);
-  scene3d.set([b64ToBytes(a.data), b64ToBytes(b.data)]);
-  scene3d.lively(false);
-  const name = scene3d.skit(score, md);
-  overlay.innerHTML = `
-    <p class="title-line outline-w">Scène de ${tier * 10} à ${tier === 9 ? 100 : tier * 10 + 9} %</p>
-    <p class="score pop"><span class="num">${tier * 10}</span><small>%</small></p>
-    <p class="verdict show">${esc(name)}</p>`;
-  if (score >= 75) sparkles(md);
-  showBubbles(score, md, token);
-  afterResult(score, token);
-  document.querySelectorAll('#scenes button').forEach((x) => x.setAttribute('aria-pressed', String(Number(x.dataset.tier) === tier)));
-}
-document.querySelector('#scenes').addEventListener('click', (e) => {
-  const b = e.target.closest('[data-tier]');
-  if (b) { blip(); showScene(Number(b.dataset.tier)); }
-});
-const clearSceneButtons = () => document.querySelectorAll('#scenes button').forEach((x) => x.setAttribute('aria-pressed', 'false'));
 
 /** Les petits événements des scènes : une tape dans la main, une poussée. */
 function sceneEvent(kind) {
