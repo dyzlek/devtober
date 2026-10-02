@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { MiiActor, useRenderer, EXPR } from '../../day-01-pulse/mii3d.js?v=3';
-import { buildDecor } from './decor.js?v=1';
+import { buildDecor } from './decor.js?v=2';
 
 /* =====================================================================
    Le plateau de Ludo (grille 15 × 15)

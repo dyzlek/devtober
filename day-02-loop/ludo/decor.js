@@ -172,24 +172,6 @@ export function buildDecor(board, id) {
     hemi.color.set(0xffffff); hemi.groundColor.set(0xd8b878); hemi.intensity = 1.2;
     lamp.color.set(0xfff4dc); lamp.intensity = 1700;
     rim.color.set(0xffd9a0); rim.intensity = 1.1;
-    // la mer, avec des vagues qui bougent
-    const seaGeo = new THREE.PlaneGeometry(400, 160, 80, 30);
-    const sea = new THREE.Mesh(seaGeo, new THREE.MeshStandardMaterial({ color: 0x1e8fd0, roughness: 0.25, metalness: 0.1, flatShading: true }));
-    sea.rotation.x = -Math.PI / 2; sea.position.set(0, FLOOR - 0.3, -110);
-    const foam = new THREE.Mesh(new THREE.PlaneGeometry(400, 4), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.7 }));
-    foam.rotation.x = -Math.PI / 2; foam.position.set(0, FLOOR + 0.02, -31);
-    group.add(sea, foam);
-    const base = seaGeo.attributes.position.array.slice();
-    out.update = (dt, t) => {
-      const pos = seaGeo.attributes.position;
-      for (let i = 0; i < pos.count; i++) {
-        const x = base[i * 3], y = base[i * 3 + 1];
-        pos.setZ(i, Math.sin(x * 0.08 + t * 1.3) * 0.5 + Math.cos(y * 0.12 + t) * 0.4);
-      }
-      pos.needsUpdate = true;
-      foam.position.z = -31 + Math.sin(t * 0.8) * 1.5;
-      foam.material.opacity = 0.45 + Math.sin(t * 0.8) * 0.25;
-    };
     group.add(parasol(-22, 14), palm(26, -18, 1.2), palm(-30, -20, 1), palm(34, 20, 0.9));
     // une serviette et un ballon
     const towel = new THREE.Mesh(new THREE.PlaneGeometry(6, 12), new THREE.MeshStandardMaterial({ map: checkerTex('#2068cf', '#ffffff') }));
