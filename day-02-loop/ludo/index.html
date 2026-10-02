@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=3">
+  <link rel="stylesheet" href="style.css?v=4">
 
   <!-- Moteur Mii (FFL.js) et ressources partagés avec le jour 1 -->
   <script src="../../day-01-pulse/lib/ffl/ffl-emscripten-single-file.cjs"></script>
@@ -80,6 +80,14 @@
                   </div>
                 </div>
 
+                <!-- À plusieurs : à qui passer la console -->
+                <div id="pass" class="pass" hidden>
+                  <p class="pass-label">Passe la console à</p>
+                  <img id="pass-img" alt="">
+                  <p class="pass-name"><b id="pass-name"></b> <span id="pass-who"></span></p>
+                  <button id="pass-ok" type="button" class="big-btn">C'est moi !</button>
+                </div>
+
                 <!-- Écran de départ -->
                 <div id="start" class="start">
                   <h2>Ludo des Mii</h2>
@@ -100,8 +108,20 @@
         </div>
       </div>
     </div>
+
+    <!-- Sous la console : le décor autour de la table et les animations des Mii -->
+    <section class="extras" aria-label="Décor et animations">
+      <div class="extras-group">
+        <p class="extras-title">Décor</p>
+        <div id="decors" class="chips"></div>
+      </div>
+      <div class="extras-group">
+        <p class="extras-title">Animations</p>
+        <div id="anims" class="chips"></div>
+      </div>
+    </section>
   </main>
 
-  <script type="module" src="game.js?v=15"></script>
+  <script type="module" src="game.js?v=18"></script>
 </body>
 </html>

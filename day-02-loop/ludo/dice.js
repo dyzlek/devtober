@@ -96,16 +96,31 @@ export class Dice {
   /** Couleur du feutre = couleur du joueur qui lance. */
   tint(hex) { this.felt.material.color.set(hex).lerp(new THREE.Color(0x1d2a22), 0.55); }
 
-  /** Lance le dé. Renvoie une promesse avec la valeur (1 à 6). */
-  roll() {
+  /**
+   * Lance le dé. Renvoie une promesse avec la valeur (1 à 6).
+   * fling (facultatif) : un geste du doigt { dx, dy, power } — direction à l'écran et force (0 à 1).
+   * Le dé part dans le sens du geste, plus ou moins vite et en tournant plus ou moins.
+   */
+  roll(fling = null) {
     if (this.rolling) return this.pending;
     this.rolling = true;
-    // lancé depuis un bord, bas et fort, avec beaucoup de rotation : il va rouler et rebondir
-    const side = Math.random() < 0.5 ? -1 : 1;
-    this.cube.position.set(side * (this.W - 1), 1.3 + Math.random() * 0.6, (Math.random() - 0.5) * this.D);
+    let dir, power;
+    if (fling && Math.hypot(fling.dx, fling.dy) > 0) {
+      const l = Math.hypot(fling.dx, fling.dy);
+      dir = new THREE.Vector2(fling.dx / l, fling.dy / l);   // à l'écran : x vers la droite, y vers le bas (= +z)
+      power = Math.max(0.15, Math.min(1, fling.power));
+    } else {
+      // lancé depuis un bord, bas et fort, avec beaucoup de rotation : il va rouler et rebondir
+      dir = new THREE.Vector2(Math.random() < 0.5 ? -1 : 1, (Math.random() - 0.5) * 0.6).normalize();
+      power = 0.55 + Math.random() * 0.35;
+    }
+    // il part du bord opposé au geste
+    this.cube.position.set(-dir.x * (this.W - 1), 1.3 + Math.random() * 0.6, Math.max(-this.D + 0.8, Math.min(this.D - 0.8, -dir.y * (this.D - 0.8))));
     this.cube.quaternion.setFromEuler(new THREE.Euler(Math.random() * 6.3, Math.random() * 6.3, Math.random() * 6.3));
-    this.vel.set(-side * (7 + Math.random() * 4), 1 + Math.random() * 2, (Math.random() - 0.5) * 4);
-    this.spin.set((Math.random() - 0.5) * 24, (Math.random() - 0.5) * 16, (Math.random() - 0.5) * 24);
+    const v = 4 + power * 10;
+    this.vel.set(dir.x * v, 1 + power * 2.5, dir.y * v * 0.7);
+    const spin = 8 + power * 26;
+    this.spin.set((Math.random() - 0.5) * spin, (Math.random() - 0.5) * spin * 0.7, (Math.random() - 0.5) * spin);
     this.phase = 'air';
     this.rollT = 0; this.restT = 0;
     this.pending = new Promise((resolve) => { this.resolve = resolve; });

@@ -1,13 +1,16 @@
 // Devtober J2 · Loop — Ludo des Mii : un vrai jeu de Ludo en 3D, toi contre trois bots.
 // La boucle : chaque pion fait le tour complet du plateau (52 cases) avant de rentrer chez lui.
-import { initMii, randomMii, getName, setName, renderIcon, b64ToBytes, bytesToB64 } from '../../day-01-pulse/mii3d.js?v=2';
-import { Board, COLORS, START, SAFE, LAST, GOAL, trackIndex } from './board.js?v=6';
-import { Dice } from './dice.js?v=5';
+import { initMii, randomMii, getName, setName, renderIcon, b64ToBytes, bytesToB64 } from '../../day-01-pulse/mii3d.js?v=3';
+import { affinity, relationOf } from './affinity.js?v=1';
+import { DECORS } from './decor.js?v=2';
+import { Board, COLORS, START, SAFE, LAST, GOAL, trackIndex } from './board.js?v=8';
+import { Dice } from './dice.js?v=6';
 
 const $ = (s) => document.querySelector(s);
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const MII_STORE = 'devtober-pulse-miis-v3';   // les Mii créés dans le jour 1 (même site)
+const DECOR_STORE = 'devtober-ludo-decor';
 
 /* =====================================================================
    Sons (Web Audio, rien à charger)
@@ -53,7 +56,7 @@ let pool = [];   // { b64, name }
 function loadPool() {
   let saved = [];
   try { saved = JSON.parse(localStorage.getItem(MII_STORE)) || []; } catch { /* rien */ }
-  pool = saved.filter((m) => m && m.data).map((m) => ({ b64: m.data, name: getName(b64ToBytes(m.data)) || 'Mii' }));
+  pool = saved.filter((m) => m && m.data).map((m) => ({ b64: m.data, name: getName(b64ToBytes(m.data)) || 'Mii', perso: m.perso }));
   // on complète avec des Mii au hasard, pour toujours avoir du choix pour les 4 places
   const taken = new Set(pool.map((m) => m.name));
   const fill = ['Alex', 'Lou', 'Sam', 'Noa', 'Jade', 'Malo', 'Léo', 'Inès', 'Hugo', 'Zoé', 'Tom', 'Lina'].filter((n) => !taken.has(n));
@@ -68,7 +71,9 @@ function loadPool() {
    État de la partie
    ===================================================================== */
 let board, dice;
-let seats = [0, 1, 2, 3];   // index dans pool du Mii de chaque place (0 = toi, 1 à 3 = les bots)
+let seats = [0, 1, 2, 3];   // index dans pool du Mii de chaque place
+let humans = [true, false, false, false];   // chaque place : un vrai joueur (sur la même console) ou un bot
+let aff = [];   // aff[p][q] : affinité entre les Mii des places p et q (calcul du jour 1)
 let players = [];    // { name, b64, bytes, human, pawns: [rel x4] }
 let current = 0;
 let gameId = 0;
@@ -77,8 +82,15 @@ let waitingRoll = null, waitingChoice = null, legalNow = [];
 
 function setupPlayers() {
   players = seats.map((k, p) => ({
-    name: pool[k].name, b64: pool[k].b64, bytes: b64ToBytes(pool[k].b64), human: p === 0, pawns: [-1, -1, -1, -1],
+    name: pool[k].name, b64: pool[k].b64, bytes: b64ToBytes(pool[k].b64), perso: pool[k].perso, human: humans[p], pawns: [-1, -1, -1, -1],
   }));
+  aff = players.map((a, p) => players.map((b, q) => (p === q ? 100 : affinity(a, b))));
+}
+const humanCount = () => humans.filter(Boolean).length;
+/** Comment on appelle une place : « Toi » s'il n'y a qu'un joueur, sinon « Joueur 1 », « Joueur 2 »… */
+function seatLabel(p) {
+  if (!humans[p]) return `Bot ${humans.slice(0, p + 1).filter((h) => !h).length}`;
+  return humanCount() === 1 ? 'Toi' : `Joueur ${humans.slice(0, p + 1).filter(Boolean).length}`;
 }
 
 /* ---------- Règles ---------- */
@@ -174,6 +186,13 @@ const SAY = {
   tense: ['…', 'Allez…', 'Pas moi, pas moi…'],
   hello: ['Salut !', 'On joue ?', 'Je vais gagner !', 'Prêt·e ?', 'Hé hé…', 'Pas de pitié !', 'Bonne chance !', 'C\u2019est parti ?', 'Je suis chaud !', 'Revanche ?'],
   picked: ['Me voilà !', 'C\u2019est moi !', 'Coucou !', 'Présent !'],
+  // selon les affinités du jour 1
+  goodjob: ['Bien joué !', 'Bravo !', 'Trop fort !', 'Vas-y !'],
+  taunt: ['Hmph !', 'Chanceux…', 'Pff, facile.', 'Même pas peur.'],
+  sorry: ['Désolé !!', 'Oups, pardon !', 'Je t\u2019aime quand même !'],
+  sad: ['Oh non…', 'Pas toi !', 'Aïe aïe…'],
+  laughAt: ['Ha ha !', 'Bien fait !', 'Hé hé !'],
+  friendHit: ['Même toi ?!', 'Traître !', 'Je te croyais mon ami·e…'],
 };
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 const bubbles = new Map();   // p -> { el, until }
@@ -203,11 +222,28 @@ function clearBubbles() { bubbles.forEach((b) => b.el.remove()); bubbles.clear()
   });
   requestAnimationFrame(followBubbles);
 })();
-/** Les autres Mii réagissent aussi (pas tous, et pas tous pareil). */
-function crowd(except, kind, react, chance = 0.6) {
+
+/**
+ * Les autres réagissent à ce qui arrive à p, selon leur affinité avec lui (calculée comme au jour 1) :
+ * ses amis l'encouragent, ceux qui ne l'aiment pas le narguent. kind = 'good' (un 6, un pion rentré…)
+ * ou 'bad' (il se fait manger).
+ */
+function react(p, kind, except = []) {
   players.forEach((_, q) => {
-    if (except.includes(q) || Math.random() > chance) return;
-    setTimeout(() => { say(q, kind, 1800); if (react) board.react(q, react); }, 250 + Math.random() * 500);
+    if (q === p || except.includes(q)) return;
+    const rel = relationOf(aff[q][p]);
+    if (rel === 'neutre' && Math.random() < 0.55) return;
+    setTimeout(() => {
+      if (kind === 'good') {
+        if (rel === 'ami') { say(q, 'goodjob', 1800); board.react(q, Math.random() < 0.5 ? 'applause' : 'goodjob'); }
+        else if (rel === 'ennemi') { say(q, 'taunt', 1800); board.react(q, 'hmph'); }
+        else { say(q, 'cheer', 1600); board.react(q, 'wow'); }
+      } else {
+        if (rel === 'ami') { say(q, 'sad', 1800); board.react(q, 'facepalm'); }
+        else if (rel === 'ennemi') { say(q, 'laughAt', 1800); board.react(q, 'applause'); }
+        else { say(q, 'watchCapture', 1600); board.react(q, 'wow'); }
+      }
+    }, 300 + Math.random() * 600);
   });
 }
 
@@ -244,6 +280,7 @@ let vec;   // fabrique de Vector3 (fournie par board.js une fois chargé)
    Un tour de jeu
    ===================================================================== */
 const speed = (p) => (fast && !players[p].human ? 0.45 : 1);
+const BOT_PAUSE = 400;   // petit temps d'attente après chaque action d'un bot (lancer, choix, déplacement)
 
 async function play() {
   const id = ++gameId;
@@ -267,22 +304,32 @@ async function turn(p, id) {
   dice.tint(COLORS[p].hex);
   sfx.turn();
   board.lookAt(board.actors[p].root.position, p);   // tout le monde se tourne vers celui qui joue
-  if (pl.human) { shotBehind(p); status('À toi ! Touche le dé pour lancer.'); }
+  if (pl.human) {
+    shotBehind(p);
+    status(humanCount() > 1 ? `À ${who(p)} de jouer ! Lance le dé d'un geste du doigt.` : 'À toi ! Lance le dé d\'un geste du doigt (ou touche-le).');
+  }
   else { shotFace(p); status(`Au tour de ${who(p)}…`); }
-  caption(pl.human ? 'À toi de jouer !' : `Au tour de ${who(p)}`, 1600);
+  caption(pl.human && humanCount() === 1 ? 'À toi de jouer !' : `Au tour de ${who(p)}`, 1600);
+  // à plusieurs sur la même console : l'écran du bas dit à qui passer la console
+  if (pl.human && humanCount() > 1) {
+    await passTo(p);
+    if (id !== gameId) return;
+  }
 
   // --- lancer le dé
+  let fling = null;
   if (pl.human) {
     $('#tray-hint').hidden = false;
-    await new Promise((r) => { waitingRoll = r; });
+    fling = await new Promise((r) => { waitingRoll = r; });
     $('#tray-hint').hidden = true;
   } else await wait(900 * k);
   if (id !== gameId) return;
   board.react(p, 'roll');
-  const roll = await dice.roll();
+  const roll = await dice.roll(fling);
+  if (!pl.human) await wait(BOT_PAUSE);
   if (id !== gameId) return;
   status(`${who(p)} fait <b>${roll}</b>${roll === 6 ? ' !' : '.'}`);
-  if (roll === 6) { sfx.six(); board.react(p, 'six'); say(p, 'six'); caption(`${who(p)} fait un 6 !`, 1500); }
+  if (roll === 6) { sfx.six(); board.react(p, 'six'); say(p, 'six'); caption(`${who(p)} fait un 6 !`, 1500); react(p, 'good'); }
   else if (roll === 1) { board.react(p, 'meh'); say(p, 'one'); }
 
   // --- choisir un pion
@@ -292,7 +339,7 @@ async function turn(p, id) {
     say(p, 'none');
     status(`${who(p)} fait ${roll} : aucun pion ne peut bouger.`);
     if (!pl.human) shotFace(p);
-    await wait(1300 * k);
+    await wait(1300 * k + (pl.human ? 0 : BOT_PAUSE));
     return 'next';
   }
   let i;
@@ -308,11 +355,13 @@ async function turn(p, id) {
   } else {
     await wait(500 * k);
     i = botChoose(p, roll, moves);
+    await wait(BOT_PAUSE);
   }
   if (id !== gameId) return;
 
   // --- déplacer
   const { captured, finished } = await move(p, i, roll, k, id);
+  if (!pl.human) await wait(BOT_PAUSE);
   if (id !== gameId) return;
   renderPlayers();
 
@@ -359,12 +408,17 @@ async function move(p, i, roll, k, id) {
     const victim = board.pawn(q, j).mesh;
     sfx.capture();
     caption(`${who(p)} renvoie ${who(q)} à la maison !`, 2400);
-    board.react(p, 'capture');
-    board.react(q, 'captured');
-    say(p, 'capture', 2600);
-    setTimeout(() => say(q, 'captured', 2600), 450);
-    crowd([p, q], 'watchCapture', 'laugh', 0.8);
-    await board.fly(victim, board.spot(q, j, -1), 0.9 * k);
+    const friends = relationOf(aff[p][q]) === 'ami';
+    board.react(p, friends ? 'facepalm' : 'capture');
+    board.react(q, friends ? 'facepalm' : 'captured');
+    say(p, friends ? 'sorry' : 'capture', 2600);
+    setTimeout(() => say(q, friends ? 'friendHit' : 'captured', 2600), 450);
+    react(q, 'bad', [p]);
+    // ralenti : la caméra suit le pion mangé qui s'envole jusqu'à sa cour, avec une traînée
+    board.slowMo(0.35);
+    shotFollow(victim, q);
+    await board.fly(victim, board.spot(q, j, -1), 0.9, COLORS[q].hex);
+    board.slowMo(1);
   }
   if (hits.length) { shotFace(hits[0][0]); await wait(1300 * k); shotFace(p); await wait(1100 * k); }
 
@@ -374,7 +428,7 @@ async function move(p, i, roll, k, id) {
     sfx.home();
     board.react(p, 'finish');
     say(p, 'home');
-    crowd([p], 'cheer', 'clap', 0.5);
+    react(p, 'good');
     caption(`${who(p)} rentre un pion !`, 1800);
     await wait(800 * k);
   }
@@ -384,34 +438,65 @@ async function move(p, i, roll, k, id) {
 
 async function victory(p) {
   sfx.win();
-  players.forEach((_, q) => { board.react(q, q === p ? 'win' : 'lose'); setTimeout(() => say(q, q === p ? 'win' : 'lose', 5000), q === p ? 0 : 600 + q * 250); });
+  players.forEach((_, q) => {
+    if (q === p) { board.react(q, 'win'); say(q, 'win', 5000); return; }
+    // les amis du gagnant applaudissent, les autres boudent
+    const friend = relationOf(aff[q][p]) === 'ami';
+    board.react(q, friend ? 'applause' : 'lose');
+    setTimeout(() => say(q, friend ? 'goodjob' : 'lose', 5000), 600 + q * 250);
+  });
   status(`${who(p)} a fait le tour complet avec ses quatre pions. Victoire !`);
   caption(`${who(p)} gagne la partie !`, 6000);
   shotFace(p);
   await wait(4500);
   shotOverview();
   $('#play').textContent = 'Rejouer';
-  $('#start h2').textContent = players[p].human ? 'Tu as gagné !' : `${players[p].name} a gagné`;
+  $('#start h2').textContent = players[p].human && humanCount() === 1 ? 'Tu as gagné !' : `${players[p].name} a gagné`;
   $('#start').hidden = false;
 }
 
 /* =====================================================================
    Entrées : dé, pions, boutons
    ===================================================================== */
-function tryRoll() {
+function tryRoll(fling = null) {
   sfx.init();
-  if (waitingRoll) { const r = waitingRoll; waitingRoll = null; r(); }
+  if (waitingRoll) { const r = waitingRoll; waitingRoll = null; r(fling); }
 }
+
+/* ---------- Lancer le dé d'un geste : la vitesse du doigt donne la force ---------- */
+let swipe = null;
+$('#tray').addEventListener('pointerdown', (e) => {
+  if (!waitingRoll) return;
+  swipe = { pts: [[e.clientX, e.clientY, performance.now()]], id: e.pointerId };
+  $('#tray').setPointerCapture?.(e.pointerId);
+});
+$('#tray').addEventListener('pointermove', (e) => {
+  if (!swipe || e.pointerId !== swipe.id) return;
+  swipe.pts.push([e.clientX, e.clientY, performance.now()]);
+  if (swipe.pts.length > 12) swipe.pts.shift();
+});
+$('#tray').addEventListener('pointerup', (e) => {
+  if (!swipe || e.pointerId !== swipe.id) return;
+  const pts = swipe.pts; swipe = null;
+  const end = [e.clientX, e.clientY, performance.now()];
+  // on regarde le mouvement des 120 dernières ms
+  const start = pts.find((q) => end[2] - q[2] <= 120) ?? pts[0];
+  const dx = end[0] - start[0], dy = end[1] - start[1], dist = Math.hypot(dx, dy);
+  const total = Math.hypot(end[0] - pts[0][0], end[1] - pts[0][1]);
+  if (total < 12) return tryRoll();   // un simple toucher : lancer normal
+  const speed = dist / Math.max(16, end[2] - start[2]);   // pixels par ms
+  tryRoll({ dx, dy, power: speed / 2.2 });
+});
+$('#tray').addEventListener('pointercancel', () => { swipe = null; });
 function tryChoose(i) {
   if (!waitingChoice || !legalNow.some(([, j]) => j === i)) return;
   const r = waitingChoice; waitingChoice = null; r(i);
 }
-$('#tray').addEventListener('click', tryRoll);
 $('#tray').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tryRoll(); } });
 $('#choices').addEventListener('click', (e) => { const b = e.target.closest('button[data-i]'); if (b) tryChoose(Number(b.dataset.i)); });
 $('#board').addEventListener('click', (e) => {
   const hit = board?.pick(e.clientX, e.clientY);
-  if (hit && hit[0] === 0) tryChoose(hit[1]);
+  if (hit && hit[0] === current) tryChoose(hit[1]);
 });
 document.addEventListener('keydown', (e) => {
   if (e.target.closest('button, input')) return;
@@ -437,12 +522,12 @@ $('#restart').addEventListener('click', () => {
 function renderLineup() {
   $('#lineup').innerHTML = seats.map((k, p) => `
     <div class="seat" style="--c:${COLORS[p].css}">
-      <span class="seat-label">${p === 0 ? 'Toi' : `Bot ${p}`}</span>
+      <button type="button" class="seat-label" data-kind="${p}" aria-pressed="${humans[p]}" title="Joueur ou bot">${seatLabel(p)}</button>
       <img src="${renderIcon(pool[k].b64)}" alt="">
       <b>${esc(pool[k].name)}</b>
       <span class="seat-nav">
-        <button type="button" class="icon-btn" data-seat="${p}" data-d="-1" aria-label="Mii précédent pour ${p === 0 ? 'toi' : `le bot ${p}`}"><svg class="ic"><use href="#i-left"/></svg></button>
-        <button type="button" class="icon-btn" data-seat="${p}" data-d="1" aria-label="Mii suivant pour ${p === 0 ? 'toi' : `le bot ${p}`}"><svg class="ic"><use href="#i-right"/></svg></button>
+        <button type="button" class="icon-btn" data-seat="${p}" data-d="-1" aria-label="Mii précédent pour ${seatLabel(p)}"><svg class="ic"><use href="#i-left"/></svg></button>
+        <button type="button" class="icon-btn" data-seat="${p}" data-d="1" aria-label="Mii suivant pour ${seatLabel(p)}"><svg class="ic"><use href="#i-right"/></svg></button>
       </span>
     </div>`).join('');
 }
@@ -462,7 +547,35 @@ function cycleSeat(p, d) {
 $('#lineup').addEventListener('click', (e) => {
   const b = e.target.closest('button[data-seat]');
   if (b) cycleSeat(Number(b.dataset.seat), Number(b.dataset.d));
+  // joueur ↔ bot (multijoueur sur la même console)
+  const kind = e.target.closest('button[data-kind]');
+  if (kind) {
+    const p = Number(kind.dataset.kind);
+    humans[p] = !humans[p];
+    sfx.init(); sfx.turn();
+    renderLineup();
+    preview();
+    $('#start p').textContent = startText();
+  }
 });
+function startText() {
+  const n = humanCount();
+  return n === 0 ? 'Quatre bots : regarde-les jouer !' : n === 1 ? 'Choisis ton Mii et ceux des bots, puis fais le tour du plateau avant eux.'
+    : `${n} joueurs sur la même console. Touche « Joueur » ou « Bot » pour changer une place.`;
+}
+
+/* ---------- À plusieurs : on passe la console ---------- */
+function passTo(p) {
+  const el = $('#pass');
+  el.style.setProperty('--c', COLORS[p].css);
+  $('#pass-img').src = renderIcon(players[p].b64);
+  $('#pass-name').textContent = players[p].name;
+  $('#pass-who').textContent = seatLabel(p);
+  el.hidden = false;
+  return new Promise((resolve) => {
+    $('#pass-ok').onclick = () => { sfx.init(); sfx.turn(); el.hidden = true; resolve(); };
+  });
+}
 $('#shuffle').addEventListener('click', () => {
   const free = pool.map((_, k) => k).filter((k) => k !== seats[0]).sort(() => Math.random() - 0.5);
   seats = [seats[0], ...free.slice(0, 3)];
@@ -503,6 +616,32 @@ function preview() {
 }
 
 /* =====================================================================
+   La barre sous la console : le décor et les animations des Mii
+   ===================================================================== */
+function setDecor(id) {
+  board.setDecor(id);
+  try { localStorage.setItem(DECOR_STORE, id); } catch { /* rien */ }
+  document.querySelectorAll('#decors button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.decor === id)));
+}
+$('#decors').innerHTML = DECORS.map((d) => `<button type="button" data-decor="${d.id}" aria-pressed="false">${d.name}</button>`).join('');
+$('#decors').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-decor]');
+  if (b) { sfx.init(); sfx.turn(); setDecor(b.dataset.decor); }
+});
+const ANIMS = [
+  ['applause', 'Applaudir', 'goodjob'], ['cheer', 'Hourra', 'six'], ['goodjob', 'Bien joué', 'goodjob'],
+  ['hmph', 'Hmph', 'taunt'], ['facepalm', 'Oh non…', 'sad'], ['laugh', 'Rire', 'laughAt'], ['wow', 'Surprise', 'watchCapture'],
+];
+$('#anims').innerHTML = ANIMS.map(([id, label]) => `<button type="button" data-anim="${id}">${label}</button>`).join('');
+$('#anims').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-anim]');
+  if (!b || !board) return;
+  const [id, , line] = ANIMS.find(([x]) => x === b.dataset.anim);
+  sfx.init(); sfx.turn();
+  players.forEach((_, q) => setTimeout(() => { board.react(q, id); say(q, line, 1800); }, q * 150));
+});
+
+/* =====================================================================
    Démarrage
    ===================================================================== */
 try {
@@ -517,6 +656,9 @@ vec = (x, y, z) => new THREE.Vector3(x, y, z);
 loadPool();
 board = new Board($('#board'));
 dice = new Dice($('#dice'), sfx);
+let savedDecor = 'salon';
+try { savedDecor = localStorage.getItem(DECOR_STORE) || 'salon'; } catch { /* rien */ }
+setDecor(DECORS.some((d) => d.id === savedDecor) ? savedDecor : 'salon');
 renderLineup();
 preview();
 $('#loading').classList.add('done');

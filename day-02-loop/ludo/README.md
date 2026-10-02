@@ -50,6 +50,22 @@ Les Mii réagissent aussi :
 
 ## Commandes
 
-- Touche le dé, ou appuie sur Espace / Entrée, pour lancer.
+- **Lance le dé d'un geste du doigt** (ou de la souris) sur l'écran du bas : le dé part dans le sens du geste, et plus le geste est rapide, plus il roule fort. Un simple toucher, ou Espace / Entrée, le lance normalement.
 - Pour choisir un pion, touche-le sur la table, utilise les boutons 1 à 4, ou les touches 1 à 4. Chaque pion porte son numéro au-dessus de la tête. Pendant un choix, les numéros des pions jouables grossissent, les autres s'estompent, et la caméra se fige au-dessus du plateau.
 - Boutons : bots rapides, son, nouvelle partie.
+- **Sous la console** : le choix du décor et des boutons pour faire jouer des animations aux quatre Mii.
+
+## Versions
+
+### v2.1
+- **Les affinités du jour 1** : au début de la partie, on calcule l'affinité amicale entre chaque paire de Mii, avec la même formule que le Testeur d'affinité ([`affinity.js`](affinity.js)). Pendant la partie :
+  - quand quelqu'un fait un 6 ou rentre un pion, ses amis l'encouragent (« Bien joué ! », applaudissements) et ceux qui ne l'aiment pas le narguent (« Hmph ! », bras croisés) ;
+  - quand quelqu'un se fait manger, ses amis se prennent la tête (« Oh non… ») et ses ennemis applaudissent (« Bien fait ! ») ;
+  - si deux amis se mangent, celui qui mange s'excuse et l'autre crie à la trahison ;
+  - à la fin, les amis du gagnant applaudissent, les autres boudent.
+- **Des réactions avec les bras** : applaudir, lever les bras, faire un « bien joué », croiser les bras, se prendre la tête. Les bras sont posés par-dessus l'animation du corps, comme dans les scènes du jour 1.
+- **Le lancer au doigt** : la vitesse et la direction du geste donnent la force et le sens du lancer.
+- **Ralenti sur les captures** : le jeu passe au ralenti, la caméra suit le pion mangé qui s'envole jusqu'à sa cour, avec une traînée de sa couleur.
+- **Quatre décors** ([`decor.js`](decor.js)) : le salon (bibliothèque, fenêtre), un pique-nique dans l'herbe (nappe à carreaux, arbres, fleurs, nuages), la plage (sable, parasol, palmiers, serviette, ballon) et la nuit (étoiles, guirlandes de lampions, lucioles). Le décor choisi est gardé pour la prochaine visite.
+- **Multijoueur local** : sur l'écran de départ, touche « Toi », « Joueur » ou « Bot » au-dessus de chaque place pour la changer. De 0 à 4 vrais joueurs sur la même console. À chaque tour d'un joueur, l'écran du bas montre à qui passer la console, avec son Mii et sa couleur.
+- **Une petite pause** de 400 ms après chaque action des bots, pour mieux suivre la partie.
