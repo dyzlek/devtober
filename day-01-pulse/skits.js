@@ -49,7 +49,7 @@ export const SKITS = [
       const p = (t + i * 1.6) % 3.4;
       const glance = between(p, 2.2, 2.9);   // un petit regard par-dessus l'épaule… et on se retourne
       return {
-        x: 2.9, turn: glance ? -0.4 : -P2, expr: glance ? 'ANGER_OPEN_MOUTH' : 'ANGER',
+        x: 7.2, turn: glance ? -0.4 : -P2, expr: glance ? 'ANGER_OPEN_MOUTH' : 'ANGER',
         shake: glance ? 0.5 : 0.15, arms: { l: CROSSED, r: CROSSED },
       };
     },
@@ -61,11 +61,11 @@ export const SKITS = [
     update(i, t) {
       const p = t % 7;
       if (i === 0) return { x: 4.2, turn: -P2 - 0.25, expr: 'SORROW', arms: { l: CROSSED, r: CROSSED }, shake: between(p, 2.4, 3.6) ? 0.3 : 0 };
-      if (p < 2) return { x: lerp(8.6, 4.4, smooth(0, 2, p)), turn: P2, expr: 'SMILE', y: Math.abs(Math.sin(p * 7)) * 0.4 * (p < 1.9 ? 1 : 0), snap: true };
+      if (p < 2) return { x: lerp(8.6, 4.4, smooth(0, 2, p)), turn: P2, expr: 'SMILE', y: Math.abs(Math.sin(p * 7)) * 0.2 * (p < 1.9 ? 1 : 0), snap: true };
       if (p < 3.6) return { x: 4.4, turn: P2, expr: 'NORMAL', arms: { l: [1.25, 0.35 + Math.sin(t * 12) * 0.12, 0.3] } };   // tape sur l'épaule
       if (p < 4.8) return { x: 4.4, turn: 0.3, expr: 'SORROW', arms: { l: [0.5, 0.25, 0.9], r: [0.5, 0.25, 0.9] } };          // haussement d'épaules
       const k = smooth(4.8, 6.8, p);
-      return { x: lerp(4.4, 8.6, k), turn: -P2 + 0.2, expr: 'SORROW', y: Math.abs(Math.sin(p * 7)) * 0.35 * (k < 1 ? 1 : 0), snap: true };
+      return { x: lerp(4.4, 8.6, k), turn: -P2 + 0.2, expr: 'SORROW', y: Math.abs(Math.sin(p * 7)) * 0.18 * (k < 1 ? 1 : 0), snap: true };
     },
   },
 
@@ -105,7 +105,7 @@ export const SKITS = [
     update(i, t) {
       const p = t % 3.6;
       const waving = i === 0 ? between(p, 0, 1.8) : between(p, 1.0, 2.8);
-      const o = { x: 6.4, turn: 0.55, expr: waving ? 'HAPPY' : 'SMILE', y: waving && p % 1.8 < 0.3 ? Math.sin((p % 1.8) / 0.3 * Math.PI) * 0.6 : 0 };
+      const o = { x: 6.4, turn: 0.55, expr: waving ? 'HAPPY' : 'SMILE', y: waving && p % 1.8 < 0.3 ? Math.sin((p % 1.8) / 0.3 * Math.PI) * 0.3 : 0 };
       // on fait signe avec le bras du côté de l'autre
       const arm = [0.25, -0.35, 0, -1.5 + Math.sin(t * 11) * 0.45];
       if (waving) o.arms = i === 0 ? { l: arm } : { r: arm };
@@ -119,7 +119,7 @@ export const SKITS = [
     update(i, t) {
       const p = t % 2.8;
       const x = p < 0.8 ? lerp(6, 4.3, smooth(0, 0.8, p)) : p < 1.7 ? 4.3 : lerp(4.3, 6, smooth(1.7, 2.6, p));
-      const jump = between(p, 0.75, 1.35) ? Math.sin(((p - 0.75) / 0.6) * Math.PI) * 1.4 : 0;
+      const jump = between(p, 0.75, 1.35) ? Math.sin(((p - 0.75) / 0.6) * Math.PI) * 0.8 : 0;
       const up = smooth(0.5, 0.8, p) * (1 - smooth(1.4, 1.7, p));
       const arm = [lerp(0.3, 1.1, up), lerp(1.15, -0.5, up), 0, lerp(0, -0.6, up)];
       return {
@@ -134,12 +134,12 @@ export const SKITS = [
   /* 70 à 79 % : on danse ensemble, en rythme */
   {
     name: { amour: 'La danse', amitie: 'La danse' },
-    bounce: 1.2,
+    bounce: 0.35,
     update(i, t) {
       const moves = ['Pose.05', 'Pose.01', 'Pose.04', 'Pose.03'];
       const bar = Math.floor(t / 1.7);
       return {
-        x: 4.4, turn: 0.25 + Math.sin(t * 3.7) * 0.35, y: Math.abs(Math.sin(t * 3.7)) * 0.5,
+        x: 6.2, turn: 0.25 + Math.sin(t * 3.7) * 0.35, y: Math.abs(Math.sin(t * 3.7)) * 0.2,
         lean: Math.sin(t * 3.7 + i) * 0.08, pose: moves[bar % moves.length], expr: bar % 2 ? 'HAPPY' : 'SMILE',
       };
     },
@@ -151,9 +151,10 @@ export const SKITS = [
     update(i, t) {
       const swing = Math.sin(t * 2.6);
       // le bras « intérieur » (vers l'autre) : le gauche pour le Mii de gauche, le droit pour l'autre
-      const inner = [0.15 + swing * 0.3, 0.72, 0.15];
+      // (réglé pour que les deux mains se rejoignent vraiment)
+      const inner = [0.15 + swing * 0.25, 0.8, 0.3];
       return {
-        x: 2.95, turn: 0.22, lean: 0.06 + swing * 0.04, y: Math.abs(Math.sin(t * 2.6)) * 0.25,
+        x: 3.8, turn: 0.22, lean: 0.01 * swing, y: Math.abs(Math.sin(t * 2.6)) * 0.08,
         expr: Math.floor(t / 2.2) % 3 === 2 ? 'LIKE' : 'HAPPY',
         arms: i === 0 ? { l: inner } : { r: inner },
       };
@@ -166,7 +167,7 @@ export const SKITS = [
     update(i, t, md) {
       if (t < 0.9) {
         const k = smooth(0, 0.9, t);
-        return { x: lerp(6.5, 3.1, k), z: -2.4 * k, turn: P2 - 0.7 * k, y: Math.abs(Math.sin(t * 9)) * 0.6, snap: true, expr: 'HAPPY', arms: { l: [1.1, 0.2, 0.3], r: [1.1, 0.2, 0.3] } };
+        return { x: lerp(6.5, 3.1, k), z: -2.4 * k, turn: P2 - 0.7 * k, y: Math.abs(Math.sin(t * 9)) * 0.3, snap: true, expr: 'HAPPY', arms: { l: [1.1, 0.2, 0.3], r: [1.1, 0.2, 0.3] } };
       }
       const pat = md === 'amitie' ? Math.max(0, Math.sin(t * 10)) * 0.5 : 0;   // tapes dans le dos entre amis
       const hug = [1.35, 0.25, 0.9 + pat];
