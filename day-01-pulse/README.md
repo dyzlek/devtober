@@ -44,7 +44,6 @@ Puis ouvre http://localhost:5173/day-01-pulse/. Sur GitHub Pages, ça marche tel
   - 80 à 89 % : main dans la main (« Côte à côte » en amitié) ;
   - 90 à 100 % : le câlin (« L'accolade » en amitié, avec des tapes dans le dos).
 - **Le cœur bat avec la musique** : après le résultat, une petite boucle joue à un tempo qui suit l'affinité, de lente et triste à rapide et joyeuse. Le gros cœur bat sur chaque temps et les Mii rebondissent dessus.
-- **Des boutons « Voir les scènes »** sous la console, un par palier (0 %, 10 %, … 90 %), pour regarder chaque scène avec les deux Mii choisis, sans faire de test.
 
 ### v1.2
 - **De la musique** : une petite boîte à musique accompagne le comptage, et sa mélodie monte avec le score. Elle passe en trémolo nerveux quand le compteur hésite. Le jingle de fin dépend du résultat : de la fanfare du coup de foudre au trombone raté sous 15 %. Tout est généré avec Web Audio.
