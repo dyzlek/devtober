@@ -2,7 +2,7 @@
 import {
   initMii, MiiScene, EXPR, renderIcon, randomMii, toCharInfo, parseCode,
   getField, setField, getName, setName, FIELDS, bytesToB64, b64ToBytes,
-} from './mii3d.js?v=1.3';
+} from './mii3d.js?v=1.3b';
 
 const $ = (s, el = document) => el.querySelector(s);
 const STORE = 'devtober-pulse-miis-v3';

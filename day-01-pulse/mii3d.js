@@ -6,7 +6,7 @@ import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 import { FFL, CharModel, FFLExpression, getRandomCharInfo, pantsColors, PantsColor } from './lib/ffl/ffl.js';
 import FFLShaderMaterial from './lib/ffl/materials/FFLShaderMaterial.js';
-import { skitFor } from './skits.js?v=1';
+import { skitFor } from './skits.js?v=2';
 
 export const EXPR = FFLExpression;
 const EXPRESSIONS = [EXPR.NORMAL, EXPR.SMILE, EXPR.HAPPY, EXPR.SORROW, EXPR.BLINK, EXPR.SURPRISE_OPEN_MOUTH, EXPR.ANGER, EXPR.ANGER_OPEN_MOUTH, EXPR.LIKE];
@@ -377,7 +377,7 @@ export class MiiScene {
     const tx = a.side * (o.x ?? 8.6) + Math.sin(t * 40 + a.side) * (o.shake ?? 0) * 0.14;
     a.root.position.x = o.snap ? tx : a.root.position.x + (tx - a.root.position.x) * ease;
     a.root.position.z += (a.side * (o.z ?? 0) - a.root.position.z) * ease;
-    a.root.position.y = (o.y ?? 0) + Math.sin(this.bump * Math.PI) * (def.bounce ?? 0.6);   // petit rebond sur le temps
+    a.root.position.y = (o.y ?? 0) + Math.sin(this.bump * Math.PI) * (def.bounce ?? 0.25);   // petit rebond sur le temps
     a.root.rotation.y += (-a.side * (o.turn ?? 0.42) - a.root.rotation.y) * turnEase;
     a.root.rotation.z += (a.side * -(o.lean ?? 0) - a.root.rotation.z) * ease;
     const pose = o.pose ?? 'Wait';
