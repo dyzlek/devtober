@@ -31,6 +31,21 @@ Puis ouvre http://localhost:5173/day-01-pulse/. Sur GitHub Pages, ça marche tel
 
 ## Versions
 
+### v1.3
+- **Une petite scène pour chaque palier de 10 %**, comme les relations dans Tomodachi Life. Elles sont décrites dans [`skits.js`](skits.js) : position, orientation, expression et bras de chaque Mii, image par image. Les bras sont posés par-dessus l'animation du corps (os `arm_l1`, `arm_r1` et les avant-bras).
+  - 0 à 9 % : l'un repousse l'autre, qui vole en arrière (« Le grand rejet » ou « La bagarre ») ;
+  - 10 à 19 % : dos à dos, bras croisés ;
+  - 20 à 29 % : la bouderie, l'autre vient s'excuser puis repart en haussant les épaules ;
+  - 30 à 39 % : le malaise, on se regarde, on détourne les yeux, on se gratte la tête ;
+  - 40 à 49 % : une poignée de main polie ;
+  - 50 à 59 % : coucou !
+  - 60 à 69 % : on se tape dans la main ;
+  - 70 à 79 % : on danse ensemble ;
+  - 80 à 89 % : main dans la main (« Côte à côte » en amitié) ;
+  - 90 à 100 % : le câlin (« L'accolade » en amitié, avec des tapes dans le dos).
+- **Le cœur bat avec la musique** : après le résultat, une petite boucle joue à un tempo qui suit l'affinité, de lente et triste à rapide et joyeuse. Le gros cœur bat sur chaque temps et les Mii rebondissent dessus.
+- **Des boutons « Voir les scènes »** sous la console, un par palier (0 %, 10 %, … 90 %), pour regarder chaque scène avec les deux Mii choisis, sans faire de test.
+
 ### v1.2
 - **De la musique** : une petite boîte à musique accompagne le comptage, et sa mélodie monte avec le score. Elle passe en trémolo nerveux quand le compteur hésite. Le jingle de fin dépend du résultat : de la fanfare du coup de foudre au trombone raté sous 15 %. Tout est généré avec Web Audio.
 - **Des bulles de réaction** : après le résultat, chaque Mii dit une petite phrase au-dessus de sa tête, selon le score et le mode (« … », « Hmph ! », « Mon âme sœur ! »). Au-delà de 90 %, des cœurs ou des étoiles s'envolent. Les bulles suivent les Mii et restent dans l'écran.
