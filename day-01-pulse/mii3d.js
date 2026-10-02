@@ -6,6 +6,7 @@ import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 import { FFL, CharModel, FFLExpression, getRandomCharInfo, pantsColors, PantsColor } from './lib/ffl/ffl.js';
 import FFLShaderMaterial from './lib/ffl/materials/FFLShaderMaterial.js';
+import { skitFor } from './skits.js?v=2';
 
 export const EXPR = FFLExpression;
 const EXPRESSIONS = [EXPR.NORMAL, EXPR.SMILE, EXPR.HAPPY, EXPR.SORROW, EXPR.BLINK, EXPR.SURPRISE_OPEN_MOUTH, EXPR.ANGER, EXPR.ANGER_OPEN_MOUTH, EXPR.LIKE];
@@ -190,6 +191,21 @@ export class MiiActor {
   }
 
   setExpression(e) { try { this.model.setExpression(e); } catch { /* expression absente */ } }
+
+  /**
+   * Pose les bras par-dessus l'animation : { l: [avant, bas, coude], r: [...] } (bras gauche / droit du Mii).
+   * avant : le bras part vers l'avant ; bas : 1,2 ≈ le long du corps, 0 = à l'horizontale, négatif = levé ;
+   * coude : l'avant-bras se replie vers l'avant ; 4e valeur (facultative) : l'avant-bras monte (négatif) ou descend.
+   */
+  pose(arms) {
+    for (const side of ['l', 'r']) {
+      const v = arms[side];
+      if (!v) continue;
+      const s = side === 'l' ? -1 : 1;
+      this.body.getObjectByName(`arm_${side}1`)?.rotation.set(0, s * v[0], s * v[1]);
+      this.body.getObjectByName(`arm_${side}2`)?.rotation.set(0, s * v[2], s * (v[3] ?? 0));
+    }
+  }
   idle(e) { this.idleExpr = e; this.setExpression(e); }
 
   update(dt, t) {
@@ -336,10 +352,42 @@ export class MiiScene {
   }
 
   /** Revient à la position neutre (face à face). */
-  calm() { this.mood = null; }
+  calm() { this.mood = null; this.skitState = null; this.actors.forEach((a) => { a.root.position.z = 0; }); }
 
   /** Pendant le comptage : ils se tournent un peu vers nous pour regarder le score. */
-  watch() { this.mood = { x: 8.6, turn: 0.16, lean: 0, shake: 0, hop: 0 }; }
+  watch() { this.skitState = null; this.actors.forEach((a) => { a.root.position.z = 0; }); this.mood = { x: 8.6, turn: 0.16, lean: 0, shake: 0, hop: 0 }; }
+
+  /**
+   * Joue la petite scène du résultat (une par palier de 10 %, voir skits.js).
+   * Renvoie son nom, pour l'afficher.
+   */
+  skit(score, md) {
+    const def = skitFor(score);
+    this.mood = null;
+    this.skitState = { def, md, t0: this.clock.elapsedTime };
+    this.actors.forEach((a) => { a.skitPose = a.skitExpr = null; });
+    return def.name[md];
+  }
+
+  /** Une image de la scène : place le Mii, son corps, son visage. Les bras sont posés après l'animation. */
+  stepSkit(a, i, t, dt) {
+    const { def, md, t0 } = this.skitState;
+    const o = def.update(i, t - t0, md) ?? {};
+    const ease = 1 - Math.exp(-dt * 6), turnEase = 1 - Math.exp(-dt * 9);
+    const tx = a.side * (o.x ?? 8.6) + Math.sin(t * 40 + a.side) * (o.shake ?? 0) * 0.14;
+    a.root.position.x = o.snap ? tx : a.root.position.x + (tx - a.root.position.x) * ease;
+    a.root.position.z += (a.side * (o.z ?? 0) - a.root.position.z) * ease;
+    a.root.position.y = (o.y ?? 0) + Math.sin(this.bump * Math.PI) * (def.bounce ?? 0.25);   // petit rebond sur le temps
+    a.root.rotation.y += (-a.side * (o.turn ?? 0.42) - a.root.rotation.y) * turnEase;
+    a.root.rotation.z += (a.side * -(o.lean ?? 0) - a.root.rotation.z) * ease;
+    const pose = o.pose ?? 'Wait';
+    if (pose !== a.skitPose) { a.skitPose = pose; a.play(pose, 0.25); }
+    const expr = EXPR[o.expr ?? 'NORMAL'];
+    if (expr !== a.skitExpr) { a.skitExpr = expr; a.idle(expr); }
+    if (o.event && o.event !== a.lastEvent) this.onEvent?.(o.event, a);
+    a.lastEvent = o.event;
+    return o.arms;
+  }
 
   /**
    * Vie au repos (avant le test) : de temps en temps, chaque Mii prend une pose,
@@ -388,7 +436,7 @@ export class MiiScene {
   tick() {
     const dt = Math.min(this.clock.getDelta(), 0.1);
     const t = this.clock.elapsedTime;
-    this.bump = Math.max(0, this.bump - dt * 6);
+    this.bump = Math.max(0, this.bump - dt * 4.5);
     for (const a of this.actors) {
       if (!this.duo) a.root.rotation.y = this.spin;
       a.root.scale.setScalar(1 + this.bump * 0.03);
@@ -402,6 +450,11 @@ export class MiiScene {
         a.root.rotation.z = step * 0.05;
         a.root.rotation.y = -a.side * (1.25 - 0.83 * Math.max(0, (p - 0.75) / 0.25));
         if (p >= 1) { a.walk = null; a.root.position.y = 0; a.root.rotation.z = 0; }
+      } else if (this.duo && a.side && this.skitState) {
+        const arms = this.stepSkit(a, this.actors.indexOf(a), t, dt);
+        a.update(dt, t);
+        if (arms) a.pose(arms);
+        continue;
       } else if (this.duo && a.side) {
         // vie au repos
         if (this.alive && !this.mood) {
