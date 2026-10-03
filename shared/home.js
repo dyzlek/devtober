@@ -22,10 +22,13 @@ const COLORS = {
 };
 const fallbackIcon = (n) => `<text x="12" y="16.5" text-anchor="middle" font-size="11" font-weight="900" fill="#fff" font-family="Nunito, sans-serif">${n}</text>`;
 
+// les projets sans Mii (et donc sans console) ne sont pas dans le menu
+const NO_MII = ['day-02-loop'];
+
 /** Tous les logiciels : l'accueil du Devtober, puis chaque projet publié (et ses bonus). */
 const APPS = [
   { key: 'hub', title: 'Devtober 2026', sub: 'Les 31 jours', pitch: 'Le calendrier de tous les projets du mois.', hash: '#/' },
-  ...DAYS.filter((d) => d.entry).flatMap((d) => d.projects.map((p) => {
+  ...DAYS.filter((d) => d.entry).flatMap((d) => d.projects.filter((p) => !NO_MII.includes(p.path ? `${d.slug}/${p.path}` : d.slug)).map((p) => {
     const key = p.path ? `${d.slug}/${p.path}` : d.slug;
     return {
       key, n: d.number, title: p.title, pitch: p.pitch,
@@ -102,7 +105,7 @@ const css = `
 .home-foot .back { background: linear-gradient(#fff, #e3e8ed); color: #59636d; box-shadow: 0 .8cqw 0 #c3ccd4; }
 .home-foot button:active { transform: translateY(.6cqw); box-shadow: none; }
 .sys-btns .home { cursor: pointer; }
-.home-flash { animation: home-flash .45s ease-out; }
+.home-flash .screen-top, .home-flash .touch { animation: home-flash .45s ease-out; }
 @keyframes home-flash { 0% { filter: brightness(1); } 40% { filter: brightness(1.8) saturate(.4); } 100% { filter: brightness(1); } }
 `;
 
