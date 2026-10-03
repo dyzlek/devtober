@@ -7,11 +7,11 @@ import { ROAD, WALL } from './track.js?v=1';
 export const MAX_SPEED = 30;          // vitesse de pointe (unités/s), ×cylindrée
 const ACCEL = 15;
 const GRASS_SPEED = 12;               // l'herbe ralentit beaucoup
-const BOOST_SPEED = 44;
-const TURN = 1.75;                    // vitesse de rotation (rad/s)
+const BOOST_SPEED = 38;            // vitesse pendant un turbo (était 44 : trop fort)
+const TURN = 1.95;                    // vitesse de rotation (rad/s)
 // dérapage : temps de charge pour chaque niveau d'étincelles, et durée du turbo qu'il donne
 export const SPARK_LEVELS = [0.85, 1.9, 3.1];
-const TURBO = [0, 0.7, 1.15, 1.7];
+const TURBO = [0, 0.6, 0.95, 1.35];
 export const SPARK_COLORS = [null, new THREE.Color(0x4cc8ff), new THREE.Color(0xffa020), new THREE.Color(0xd060ff)];
 const MII_SCALE = 0.078;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -187,10 +187,10 @@ export class Kart {
       const inward = input.steer * this.drift;
       if (input.assist) yaw = -input.steer * TURN * 1.35 * grip;   // pilote ordinateur : il garde sa trajectoire
       else {
-        // le joueur : un virage large et régulier (0,26 à 1,66 rad/s selon qu'on braque vers l'extérieur ou l'intérieur),
+        // le joueur : un virage large et régulier (0 à 1,95 rad/s selon qu'on braque vers l'extérieur ou l'intérieur),
         // qui s'installe en douceur au lieu de tourner d'un coup
-        const target = -this.drift * TURN * (0.55 + 0.4 * inward) * grip;
-        this.driftYaw += (target - this.driftYaw) * Math.min(1, dt * 2.5);
+        const target = -this.drift * TURN * (0.5 + 0.5 * inward) * grip;
+        this.driftYaw += (target - this.driftYaw) * Math.min(1, dt * 3.5);
         yaw = this.driftYaw;
       }
       this.charge += dt * (1 + 0.5 * Math.max(0, inward));
@@ -205,7 +205,8 @@ export class Kart {
 
     // --- vitesse
     this.offroad = Math.abs(track.lateral(this.root.position, this.idx)) > ROAD + 1.3 && this.boost <= 0;
-    let target = this.boost > 0 ? BOOST_SPEED * (0.9 + 0.1 * opts.speedMul) : this.offroad ? GRASS_SPEED : top;
+    // turbo : 25 % plus vite que la vitesse de pointe (quelle que soit la cylindrée)
+    let target = this.boost > 0 ? top * 1.25 : this.offroad ? GRASS_SPEED : top;
     if (input.brake) target = 0;
     if (this.drift) target *= 0.97;
     if (this.boost > 0) { this.speed = Math.max(this.speed, target * 0.92); this.boost -= dt; }
