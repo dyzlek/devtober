@@ -9,8 +9,18 @@ const MII_STORE = 'devtober-pulse-miis-v3';
 const MAX_DANCERS = 14;
 const SONG_BEATS = 256;          // 64 mesures ≈ 2 minutes
 const FIRST_NOTE = 8;            // 2 mesures pour se mettre dans le rythme
-const APPROACH = 1.6;            // l'anneau met 1,6 temps à rejoindre le cercle
-const WIN = { 300: 0.07, 100: 0.13, 50: 0.19 };   // fenêtres de timing (secondes)
+// les trois niveaux : le temps que met l'anneau à arriver (en temps), les fenêtres de timing (secondes),
+// la taille des cercles, la densité des notes, ce que rapporte une note et ce que coûte un raté
+const LEVELS = {
+  facile: { name: 'Facile', approach: 2.1, win: { 300: 0.09, 100: 0.16, 50: 0.23 }, size: 1.18, density: 'sparse', gain: 1.35, miss: 3 },
+  moyen: { name: 'Moyen', approach: 1.6, win: { 300: 0.07, 100: 0.13, 50: 0.19 }, size: 1, density: 'normal', gain: 1, miss: 5 },
+  difficile: { name: 'Difficile', approach: 1.25, win: { 300: 0.05, 100: 0.1, 50: 0.15 }, size: 0.86, density: 'dense', gain: 0.85, miss: 7 },
+};
+const LEVEL_STORE = 'devtober-bloom-level';
+let level = 'moyen';
+try { if (LEVELS[localStorage.getItem(LEVEL_STORE)]) level = localStorage.getItem(LEVEL_STORE); } catch { /* rien */ }
+let APPROACH = LEVELS[level].approach;   // l'anneau met ce nombre de temps à rejoindre le cercle
+let WIN = LEVELS[level].win;
 const NOTE_COLORS = ['#ff5b8d', '#ffb02e', '#4aa8ff', '#39c27a', '#9a6bff'];
 const STAGES = [
   [0, 'Calme', 'La soirée commence…'],
@@ -76,6 +86,10 @@ function generate(beats) {
     const breath = t % 16 >= 14;
     let step = breath ? 2 : hype < 25 ? (t < 24 ? 2 : 1) : hype < 55 ? 1 : hype < 85 ? (t % 4 === 3 ? 0.5 : 1) : (t % 2 === 1 ? 0.5 : 1);
     if (inDrop) step = t % 8 >= 6 ? 1 : 0.5;
+    // le niveau change la densité : moins de notes en facile, plus de doubles croches en difficile
+    const d = LEVELS[level].density;
+    if (d === 'sparse') step = inDrop ? 1 : step < 1 ? 1 : hype < 45 && !breath ? 2 : step;
+    if (d === 'dense') step = breath ? 1 : step >= 2 ? 1 : step === 1 && hype >= 25 && t % 2 === 1 ? 0.5 : step;
     // nouveau groupe (nouvelle couleur, on recompte à partir de 1) toutes les 4 notes ou après une pause
     if (gen.inGroup >= (step < 1 ? 8 : 4) || gen.lastStep === 2) { gen.group++; gen.inGroup = 0; }
     // la position suit un chemin fluide : on tourne un peu à chaque note, on rebondit sur les bords
@@ -102,7 +116,7 @@ function resizeField() {
   W = r.width; H = r.height;
   field.width = Math.round(W * dpr); field.height = Math.round(H * dpr);
   fctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  R = Math.min(W, H) * 0.085;
+  R = Math.min(W, H) * 0.085 * LEVELS[level].size;
 }
 new ResizeObserver(resizeField).observe(field);
 
@@ -134,12 +148,12 @@ function judge(note, kind) {
     counts.miss++;
     if (combo >= 10) caption(`Combo perdu (${combo})`, 1200);
     combo = 0;
-    hype = Math.max(0, hype - 5);
+    hype = Math.max(0, hype - LEVELS[level].miss);
   } else {
     counts[kind]++;
     combo++; maxCombo = Math.max(maxCombo, combo);
-    score += Math.round(kind * (1 + combo / 25));
-    hype = Math.min(100, hype + (kind === 300 ? 2.4 : kind === 100 ? 1.2 : 0.3));
+    score += Math.round(kind * (1 + combo / 25) * (level === 'difficile' ? 1.5 : level === 'facile' ? 0.75 : 1));
+    hype = Math.min(100, hype + (kind === 300 ? 2.4 : kind === 100 ? 1.2 : 0.3) * LEVELS[level].gain);
     // le cercle s'ouvre en fleur… et une fleur de lumière éclot sur la piste, au même endroit
     club.bloomAt((note.x - 0.5) * 18, (note.y - 0.5) * 14, null, kind === 300 ? 1.2 : 0.7);
   }
@@ -306,9 +320,25 @@ function endGame() {
   $('#r-acc').textContent = `${acc.toFixed(2).replace('.', ',')} %`;
   $('#r-combo').textContent = maxCombo;
   $('#r-hits').textContent = `${counts[300]} / ${counts[100]} / ${counts[50]} / ${counts.miss}`;
+  $('#r-level').textContent = LEVELS[level].name;
   $('#results').hidden = false;
   caption(rank.startsWith('S') ? 'Soirée légendaire !' : 'Merci d’être venu·e !', 3000);
 }
+
+/* ---------- le choix du niveau (sur l'écran d'entrée et les résultats) ---------- */
+function setLevel(id) {
+  level = id;
+  APPROACH = LEVELS[id].approach;
+  WIN = LEVELS[id].win;
+  resizeField();
+  try { localStorage.setItem(LEVEL_STORE, id); } catch { /* rien */ }
+  document.querySelectorAll('.levels button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.level === id)));
+}
+document.querySelectorAll('.levels').forEach((el) => el.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-level]');
+  if (b) setLevel(b.dataset.level);
+}));
+setLevel(level);
 
 /* ---------- son et boutons ---------- */
 $('#mute').addEventListener('click', (e) => {

@@ -30,6 +30,19 @@ Deux sens du mot, réunis :
 - Plus l'ambiance monte, plus il y a de cercles, avec des enchaînements rapides au plus fort de la soirée.
 - La soirée dure 64 mesures (environ 2 minutes). À la fin : rang (S+, S, A, B, C, D), précision, score et meilleur combo.
 
+## Les niveaux
+
+Trois niveaux à choisir avant la soirée (le choix est gardé pour la prochaine fois) :
+
+| | Facile | Moyen | Difficile |
+|---|---|---|---|
+| L'anneau met… | 2,1 temps | 1,6 temps | 1,25 temps |
+| Fenêtre du « 300 » | 90 ms | 70 ms | 50 ms |
+| Taille des cercles | plus grands | normale | plus petits |
+| Notes | moins nombreuses, pas de doubles croches | normal | plus serrées, doubles croches dès que ça s'anime |
+| Ambiance | monte plus vite, un raté coûte peu | normal | monte moins vite, un raté coûte cher |
+| Score | ×0,75 | ×1 | ×1,5 |
+
 ## Comment c'est codé
 
 - [`music.js`](music.js) : le morceau électro à 124 BPM, généré en direct avec Web Audio (kick, basse, hi-hats, claps, accords, arpèges).
