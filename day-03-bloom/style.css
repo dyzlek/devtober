@@ -240,3 +240,14 @@ button { cursor: pointer; }
 .levels { display: flex; gap: 1.2cqw; }
 .levels button { border: .4cqw solid #ecd9a0; background: #fff; border-radius: 99px; padding: .7cqw 2.6cqw; font: inherit; font-weight: 900; color: #8a6420; cursor: pointer; }
 .levels button[aria-pressed="true"] { background: var(--pink); border-color: var(--pink); color: #fff; }
+
+/* la photo souvenir, posée de travers sur l'écran du haut */
+.souvenir {
+  position: absolute; left: 50%; top: 50%; width: 52cqw; margin: 0; padding: 1.6cqw 1.6cqw 0; z-index: 4; background: #fffdf6;
+  transform: translate(-50%, -54%) rotate(-4deg); box-shadow: 0 1.6cqw 4cqw rgba(0,0,0,.55); border-radius: .6cqw;
+  animation: souvenir .7s cubic-bezier(.3, 1.5, .5, 1);
+}
+.souvenir[hidden] { display: none; }
+.souvenir img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: .3cqw; }
+.souvenir figcaption { padding: 1.4cqw 0 1.8cqw; text-align: center; font-weight: 900; font-size: 2.6cqw; color: #4a3324; }
+@keyframes souvenir { from { opacity: 0; transform: translate(-50%, -30%) rotate(8deg) scale(.7); } }

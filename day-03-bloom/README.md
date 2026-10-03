@@ -30,6 +30,15 @@ Deux sens du mot, réunis :
 - Plus l'ambiance monte, plus il y a de cercles, avec des enchaînements rapides au plus fort de la soirée.
 - La soirée dure 64 mesures (environ 2 minutes). À la fin : rang (S+, S, A, B, C, D), précision, score et meilleur combo.
 
+## Les nouveautés
+
+- **Une grande fleur de néon derrière le DJ** : un pétale s'allume et s'ouvre tous les 12 % d'ambiance. Au drop, une deuxième couronne de pétales s'ouvre, la fleur tourne et change de couleur.
+- **Des notes longues**, comme les « sliders » d'osu! : on touche le début au bon moment, puis on **garde le doigt appuyé** en suivant la bille le long du chemin jusqu'au bout. Si on lâche ou qu'on sort de l'anneau, la note est cassée.
+- **Le combo compte** : tous les 25, la foule applaudit. À 50, puis tous les 100, le DJ lève les bras et la foule crie.
+- **Les Mii réagissent à ton jeu** : sur un raté, un danseur s'arrête, croise les bras et boude.
+- **Des duos selon les affinités du jour 1** : un Mii qui a une grande affinité avec un danseur seul vient danser en face de lui, et ils font les mêmes pas en même temps (3 duos au plus).
+- **Une photo souvenir** : la boîte prend une photo de la piste à chaque nouveau palier, puis en plein drop. À la fin, elle s'affiche sur l'écran du haut comme un polaroid, avec la date et ton rang.
+
 ## Les niveaux
 
 Trois niveaux à choisir avant la soirée (le choix est gardé pour la prochaine fois) :
