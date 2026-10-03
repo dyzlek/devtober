@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { initMii, useRenderer, randomMii, setName, getName, b64ToBytes, bytesToB64, renderIcon, MiiActor, EXPR } from '../day-01-pulse/mii3d.js?v=2';
 import { Track } from './track.js?v=1';
-import { Kart, SPARK_COLORS } from './kart.js?v=1';
+import { Kart, SPARK_COLORS } from './kart.js?v=2';
 import { Fx } from './fx.js?v=1';
 import { Audio } from './audio.js?v=1';
 

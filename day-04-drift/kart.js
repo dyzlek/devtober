@@ -118,6 +118,7 @@ export class Kart {
     this.heading = heading;
     this.speed = 0;
     this.y = 0; this.vy = 0;
+    this.driftYaw = 0;       // rotation pendant le dérapage (lissée)
     this.drift = 0;          // 0 = pas de dérapage, sinon −1 (gauche) ou 1 (droite)
     this.charge = 0;         // temps passé à déraper
     this.level = 0;          // niveau des étincelles (0 à 3)
@@ -184,15 +185,21 @@ export class Kart {
     if (this.drift) {
       // braquer vers l'intérieur serre le virage, braquer vers l'extérieur l'élargit
       const inward = input.steer * this.drift;
-      yaw = input.assist
-        ? -input.steer * TURN * 1.35 * grip                       // pilote ordinateur : il garde sa trajectoire
-        : -this.drift * TURN * (0.7 + 0.55 * inward) * grip;
+      if (input.assist) yaw = -input.steer * TURN * 1.35 * grip;   // pilote ordinateur : il garde sa trajectoire
+      else {
+        // le joueur : un virage large et régulier (0,26 à 1,66 rad/s selon qu'on braque vers l'extérieur ou l'intérieur),
+        // qui s'installe en douceur au lieu de tourner d'un coup
+        const target = -this.drift * TURN * (0.55 + 0.4 * inward) * grip;
+        this.driftYaw += (target - this.driftYaw) * Math.min(1, dt * 2.5);
+        yaw = this.driftYaw;
+      }
       this.charge += dt * (1 + 0.5 * Math.max(0, inward));
       const lvl = SPARK_LEVELS.filter((s) => this.charge >= s).length;
       if (lvl > this.level) { this.level = lvl; ev.push('level'); }
     } else {
       yaw = -input.steer * TURN * grip * (1 - 0.3 * this.speed / BOOST_SPEED);
       if (!grounded) yaw *= 0.6;
+      this.driftYaw = yaw;   // le dérapage partira de la rotation actuelle
     }
     this.heading += yaw * dt;
 
