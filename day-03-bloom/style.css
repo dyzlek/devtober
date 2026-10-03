@@ -235,3 +235,8 @@ button { cursor: pointer; }
   .sys-btns span { font-size: 2.4cqw; padding: 1.4cqw 0; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+/* le choix du niveau */
+.levels { display: flex; gap: 1.2cqw; }
+.levels button { border: .4cqw solid #ecd9a0; background: #fff; border-radius: 99px; padding: .7cqw 2.6cqw; font: inherit; font-weight: 900; color: #8a6420; cursor: pointer; }
+.levels button[aria-pressed="true"] { background: var(--pink); border-color: var(--pink); color: #fff; }

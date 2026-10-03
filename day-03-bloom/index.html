@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=2">
+  <link rel="stylesheet" href="style.css?v=3">
 
   <!-- Moteur Mii (FFL.js) et ressources partagés avec le jour 1 -->
   <script src="../day-01-pulse/lib/ffl/ffl-emscripten-single-file.cjs"></script>
@@ -86,6 +86,11 @@
                 <div id="start" class="start">
                   <h2>La boîte des Mii</h2>
                   <p>Touche les cercles <b>pile quand l'anneau les rejoint</b>, au rythme de la musique. Chaque cercle réussi fait éclore la fête.</p>
+                  <div class="levels" role="group" aria-label="Niveau">
+                    <button type="button" data-level="facile" aria-pressed="false">Facile</button>
+                    <button type="button" data-level="moyen" aria-pressed="true">Moyen</button>
+                    <button type="button" data-level="difficile" aria-pressed="false">Difficile</button>
+                  </div>
                   <button id="open" type="button" class="big-btn" disabled>Chargement…</button>
                   <p class="small">Souris, doigt, ou touches X / C / Espace en visant avec la souris.</p>
                 </div>
@@ -99,7 +104,13 @@
                     <div><dt>Précision</dt><dd id="r-acc">0 %</dd></div>
                     <div><dt>Meilleur combo</dt><dd id="r-combo">0</dd></div>
                     <div><dt>300 / 100 / 50 / raté</dt><dd id="r-hits">0</dd></div>
+                    <div><dt>Niveau</dt><dd id="r-level">Moyen</dd></div>
                   </dl>
+                  <div class="levels" role="group" aria-label="Niveau">
+                    <button type="button" data-level="facile" aria-pressed="false">Facile</button>
+                    <button type="button" data-level="moyen" aria-pressed="true">Moyen</button>
+                    <button type="button" data-level="difficile" aria-pressed="false">Difficile</button>
+                  </div>
                   <button id="again" type="button" class="big-btn">Rejouer</button>
                 </div>
               </section>
@@ -116,7 +127,7 @@
     </div>
   </main>
 
-  <script type="module" src="game.js?v=14"></script>
+  <script type="module" src="game.js?v=15"></script>
   <!-- easter egg : le bouton HOME ouvre le menu HOME de la 3DS -->
   <script type="module" src="../shared/home.js?v=2"></script>
 </body>
