@@ -81,12 +81,83 @@ class Pool {
   }
 }
 
+/**
+ * Les traces de pneus : des bandes sombres posées sur la route derrière les roues arrière,
+ * qui s'effacent doucement. Un seul maillage (un anneau de quads réutilisés).
+ */
+class Skids {
+  constructor(scene, max = 1400) {
+    this.max = max; this.next = 0;
+    this.pos = new Float32Array(max * 4 * 3);
+    this.alpha = new Float32Array(max * 4);
+    this.age = new Float32Array(max).fill(99);
+    const idx = [];
+    for (let q = 0; q < max; q++) { const a = q * 4; idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(this.pos, 3));
+    g.setAttribute('alpha', new THREE.BufferAttribute(this.alpha, 1));
+    g.setIndex(idx);
+    const mat = new THREE.ShaderMaterial({
+      vertexShader: 'attribute float alpha; varying float vA; void main() { vA = alpha; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+      fragmentShader: 'varying float vA; void main() { gl_FragColor = vec4(0.12, 0.12, 0.14, vA); }',
+      transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2,
+    });
+    this.mesh = new THREE.Mesh(g, mat);
+    this.mesh.frustumCulled = false;
+    scene.add(this.mesh);
+    this.last = new Map();   // kart → dernières positions des deux roues
+  }
+  quad(a, b) {   // une bande entre deux points au sol
+    const q = this.next; this.next = (q + 1) % this.max;
+    const dx = b.x - a.x, dz = b.z - a.z, l = Math.hypot(dx, dz) || 1, w = 0.13;
+    const nx = -dz / l * w, nz = dx / l * w, y = 0.025;
+    this.pos.set([a.x + nx, y, a.z + nz, a.x - nx, y, a.z - nz, b.x + nx, y, b.z + nz, b.x - nx, y, b.z - nz], q * 12);
+    this.age[q] = 0;
+  }
+  mark(kart, w1, w2) {
+    const prev = this.last.get(kart);
+    const now = [w1.clone(), w2.clone()];
+    if (prev && prev[0].distanceToSquared(now[0]) > 0.04) { this.quad(prev[0], now[0]); this.quad(prev[1], now[1]); this.last.set(kart, now); }
+    else if (!prev) this.last.set(kart, now);
+  }
+  lift(kart) { this.last.delete(kart); }
+  update(dt) {
+    for (let q = 0; q < this.max; q++) {
+      this.age[q] += dt;
+      const a = Math.max(0, 0.45 * (1 - this.age[q] / 7));   // 7 secondes pour disparaître
+      for (let v = 0; v < 4; v++) this.alpha[q * 4 + v] = a;
+    }
+    const g = this.mesh.geometry;
+    g.attributes.position.needsUpdate = g.attributes.alpha.needsUpdate = true;
+  }
+  clear() { this.age.fill(99); this.last.clear(); }
+}
+
 export class Fx {
   constructor(scene) {
-    this.glow = new Pool(scene, 900, true);    // étincelles, flammes
+    this.glow = new Pool(scene, 1400, true);   // étincelles, flammes, feux d'artifice
     this.dust = new Pool(scene, 500, false);   // poussière, fumée
+    this.skids = new Skids(scene);
+    this.rockets = [];
   }
   spark(p, v, color, size = 0.35, life = 0.35) { this.glow.emit(p, v, color, size, life); }
   puff(p, v, color, size = 0.8, life = 0.7) { this.dust.emit(p, v, color, size, life, 1.5); }
-  update(dt) { this.glow.update(dt, 9); this.dust.update(dt, -0.6); }
+  /** Un feu d'artifice : une fusée monte puis éclate en étoile colorée. Renvoie la hauteur de l'explosion. */
+  firework(at, color = new THREE.Color().setHSL(Math.random(), 1, 0.6)) {
+    this.rockets.push({ p: at.clone(), v: new THREE.Vector3((Math.random() - 0.5) * 2, 22 + Math.random() * 6, (Math.random() - 0.5) * 2), t: 0.75 + Math.random() * 0.3, color });
+  }
+  update(dt) {
+    this.rockets = this.rockets.filter((r) => {
+      r.t -= dt; r.v.y -= 9 * dt; r.p.addScaledVector(r.v, dt);
+      this.glow.emit(r.p, new THREE.Vector3(0, -2, 0), new THREE.Color(0xfff0c0), 0.5, 0.25);   // la traînée
+      if (r.t > 0) return true;
+      for (let k = 0; k < 70; k++) {   // l'explosion : une sphère de particules
+        const v = new THREE.Vector3().randomDirection().multiplyScalar(9 + Math.random() * 4);
+        this.glow.emit(r.p, v, k % 5 ? r.color : new THREE.Color(0xffffff), 0.9, 1.1 + Math.random() * 0.5);
+      }
+      this.onBoom?.();
+      return false;
+    });
+    this.glow.update(dt, 9); this.dust.update(dt, -0.6); this.skids.update(dt);
+  }
 }

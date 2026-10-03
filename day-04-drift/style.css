@@ -285,3 +285,24 @@ button { cursor: pointer; }
   .sys-btns span { font-size: 2.4cqw; padding: 1.4cqw 0; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+/* =====================================================================
+   Objets, pièces, effet de vitesse, liens d'amitié
+   ===================================================================== */
+.speed { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; filter: blur(.6px); }
+.race-hud { z-index: 2; }
+.coins { position: absolute; left: 2.4cqw; top: 8.4cqw; margin: 0; display: flex; align-items: center; gap: .8cqw; font-size: 3.6cqw; font-style: italic; }
+.coins .ic { width: 4cqw; height: 4cqw; stroke: none; filter: drop-shadow(0 .3cqw 0 rgba(0,0,0,.3)); }
+.slot {
+  position: absolute; left: 50%; top: 1.6cqw; translate: -50% 0; width: 10cqw; height: 10cqw; border-radius: 2.4cqw;
+  background: rgba(255, 255, 255, .85); box-shadow: inset 0 0 0 .6cqw #4a3324, 0 .6cqw 0 rgba(0,0,0,.25); display: grid; place-items: center;
+}
+.slot svg { width: 75%; height: 75%; }
+.slot.rolling svg { animation: slotRoll .12s steps(2) infinite; }
+.slot.ready { animation: slotPop .35s cubic-bezier(.3, 1.8, .5, 1); }
+@keyframes slotRoll { 50% { transform: translateY(-.6cqw); } }
+@keyframes slotPop { from { transform: scale(1.4); } }
+.item-btn { background: #fff8de; }
+.item-btn svg { width: 64%; height: 64%; }
+.item-btn:disabled { opacity: .45; }
+.board li .rel { width: 2.6cqw; height: 2.6cqw; flex: none; }

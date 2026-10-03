@@ -98,6 +98,13 @@ export class Audio {
   turbo(n = 1) { this.hiss(0.6 + n * 0.15, { vol: 0.45, freq: 500, to: 3500 }); this.tone(180, 0.5, { type: 'sawtooth', vol: 0.12, slide: 2.5 }); }
   pad() { this.turbo(1); this.tone(660, 0.1, { vol: 0.12 }); this.tone(990, 0.15, { vol: 0.12, at: this.ctx?.currentTime + 0.07 }); }
   bump() { this.tone(90, 0.25, { type: 'sine', vol: 0.6, slide: 0.5 }); this.hiss(0.15, { vol: 0.3, freq: 400, to: 200 }); }
+  coin() { const t = this.ctx?.currentTime ?? 0; this.tone(988, 0.08, { vol: 0.12, at: t }); this.tone(1319, 0.25, { vol: 0.12, at: t + 0.07 }); }
+  box() { const t = this.ctx?.currentTime ?? 0; for (let k = 0; k < 6; k++) this.tone(600 + k * 120, 0.06, { type: 'triangle', vol: 0.08, at: t + k * 0.13 }); }
+  got() { this.tone(1175, 0.18, { type: 'triangle', vol: 0.14 }); }
+  hit() { this.tone(700, 0.6, { type: 'sawtooth', vol: 0.1, slide: 0.25 }); this.hiss(0.3, { vol: 0.3, freq: 1500, to: 400 }); }
+  star() { const t = this.ctx?.currentTime ?? 0; [0, 4, 7, 12, 7, 4].forEach((n, k) => this.tone(784 * 2 ** (n / 12), 0.12, { type: 'square', vol: 0.07, at: t + k * 0.08 })); }
+  trick() { this.tone(500, 0.25, { type: 'triangle', vol: 0.18, slide: 2.2 }); this.hiss(0.25, { vol: 0.2, freq: 2000, to: 5000 }); }
+  boom() { this.hiss(0.6, { vol: 0.35, freq: 300, to: 120, q: 0.6 }); this.tone(70, 0.4, { type: 'sine', vol: 0.4, slide: 0.5 }); }
   beep(go) { this.tone(go ? 880 : 440, go ? 0.7 : 0.25, { vol: 0.22 }); }
   select() { this.tone(660, 0.07, { vol: 0.12 }); this.tone(990, 0.09, { vol: 0.12, at: this.ctx?.currentTime + 0.06 }); }
   lap(final) {

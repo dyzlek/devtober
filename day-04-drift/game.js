@@ -1,10 +1,12 @@
 // Drift · Mii Kart : une course de karts à 8 Mii sur 3 tours. Le dérapage charge un turbo.
 import * as THREE from 'three';
-import { initMii, useRenderer, randomMii, setName, getName, b64ToBytes, bytesToB64, renderIcon, MiiActor, EXPR } from '../day-01-pulse/mii3d.js?v=2';
-import { Track } from './track.js?v=1';
-import { Kart, SPARK_COLORS } from './kart.js?v=7';
-import { Fx } from './fx.js?v=1';
-import { Audio } from './audio.js?v=1';
+import { initMii, useRenderer, randomMii, setName, getName, b64ToBytes, bytesToB64, renderIcon, MiiActor, EXPR } from '../day-01-pulse/mii3d.js?v=3';
+import { Track, WALL } from './track.js?v=2';
+import { Kart, SPARK_COLORS } from './kart.js?v=8';
+import { Fx } from './fx.js?v=2';
+import { Audio } from './audio.js?v=2';
+import { Items } from './items.js?v=2';
+import { affinity, relationOf } from '../day-02-loop/ludo/affinity.js?v=2';
 
 const $ = (s) => document.querySelector(s);
 const MII_STORE = 'devtober-pulse-miis-v3';
@@ -24,7 +26,7 @@ let pool = [];   // { b64, name, icon }
 function loadPool() {
   let saved = [];
   try { saved = JSON.parse(localStorage.getItem(MII_STORE)) || []; } catch { /* rien */ }
-  pool = saved.filter((m) => m && m.data).map((m) => ({ b64: m.data, name: getName(b64ToBytes(m.data)) || 'Mii' }));
+  pool = saved.filter((m) => m && m.data).map((m) => ({ b64: m.data, name: getName(b64ToBytes(m.data)) || 'Mii', perso: m.perso }));
   const taken = new Set(pool.map((m) => m.name));
   const fill = NAMES.filter((n) => !taken.has(n));
   for (let i = 0; pool.length < RACERS + 2 && i < fill.length; i++) {
@@ -59,7 +61,8 @@ function resize() {
 new ResizeObserver(resize).observe(canvas.parentElement);
 
 /* ---------- état ---------- */
-let track, fx, karts = [], player, spectators = [];
+let track, fx, items, karts = [], player, spectators = [];
+let podium = null, fireworkT = 0, lastOrder = [];
 const audio = new Audio();
 let state = 'loading';     // loading → menu → intro → count → race → done → results
 let stateT = 0, raceT = 0, camYaw = 0, cc = 100, pick = 0, lastPos = 0, rocket = 0;
@@ -76,6 +79,11 @@ addEventListener('keydown', (e) => {
   if ((e.code === 'Space' || e.code === 'Enter') && state === 'menu' && !$('#go').disabled && e.target === document.body) startRace();
 });
 addEventListener('keyup', (e) => keys.delete(e.code));
+// utiliser son objet : flèche du haut, E, W, ou le bouton de l'écran du bas
+addEventListener('keydown', (e) => {
+  if (['ArrowUp', 'KeyE', 'KeyW', 'KeyZ'].includes(e.code) && !e.repeat && state === 'race' && !player.finished) { e.preventDefault(); items.use(player); }
+});
+$('#use').addEventListener('pointerdown', (e) => { e.preventDefault(); audio.init(); if (state === 'race' && !player.finished) items.use(player); });
 addEventListener('blur', () => { keys.clear(); touch.left = touch.right = touch.drift = false; });
 for (const id of ['left', 'right', 'drift']) {
   const el = $(`#${id}`);
@@ -107,6 +115,13 @@ function botInput(k, dt) {
   k.laneT -= dt;
   if (k.laneT < 0) { k.laneTarget = (Math.random() * 2 - 1) * 4.2; k.laneT = 2 + Math.random() * 3; }
   k.lane += (k.laneTarget - k.lane) * Math.min(1, dt * 0.8);
+  // affinités du jour 1 : un rival te colle aux roues, un ami te laisse passer
+  const gapToPlayer = player.progress - k.progress;
+  if (k.rel === 'ennemi' && gapToPlayer > 0 && gapToPlayer < 70) k.laneTarget = clamp(track.lateral(player.root.position, player.idx), -5, 5);
+  if (k.rel === 'ami' && gapToPlayer < 0 && gapToPlayer > -25) {
+    const pl = track.lateral(player.root.position, player.idx);
+    k.laneTarget = pl > 0 ? -4 : 4;   // il se pousse sur le côté
+  }
   const look = Math.round((9 + k.speed * 0.42) / track.step);
   // dans un virage, on prend la corde (le côté intérieur)
   const curve = track.turn[(k.idx + Math.round(look * 0.6)) % n];
@@ -161,8 +176,16 @@ function placeKarts() {
     k.driftSkill = 0.6 + Math.random() * 0.6;
     k.lapStart = 0;
     k.place = 0;   // forcera l'affichage de la position au départ
+    k.b64 = pool[pi].b64;
   });
   player = karts[PLAYER_SLOT];
+  // les affinités du jour 1 entre toi et chaque pilote : ami (≥ 70), rival (< 30)
+  const me = { b64: player.b64, bytes: b64ToBytes(player.b64), perso: pool[pick].perso };
+  for (const k of karts) {
+    if (k === player) { k.rel = null; continue; }
+    k.rel = relationOf(affinity(me, { b64: k.b64, bytes: b64ToBytes(k.b64), perso: pool[k.poolIndex].perso }));
+    k.friendOf = k.rel === 'ami' ? player : null;
+  }
 }
 
 const icons = new Map();
@@ -215,6 +238,11 @@ function startRace() {
   $('#race-hud').hidden = true;
   $('#cc-label').textContent = `${cc}cc`;
   raceT = 0; rocket = 0; lastPos = 0;
+  items.reset(karts);
+  fx.skids.clear();
+  removePodium();
+  lastOrder = [];
+  updateSlot();
   setState('intro');
   say('Circuit Mii', { cls: 'small', time: 2.4 });
   renderBoard();
@@ -228,6 +256,8 @@ function finishPlayer() {
   audio.fanfare(place <= 3);
   player.feel(place <= 3 ? EXPR.HAPPY : place >= 6 ? EXPR.SORROW : EXPR.SMILE, 99);
   cheer(place <= 3);
+  track.cheer(6);
+  fireworkT = 0.2;   // feux d'artifice au-dessus de la ligne d'arrivée
 }
 
 function showResults() {
@@ -240,8 +270,56 @@ function showResults() {
     const t = k.finished ? k.finishTime : estimate(k);
     return `<li class="${k === player ? 'me' : ''}" style="--c:#${k.color.getHexString()}"><b>${i + 1}</b><img src="${k.icon.src}" alt=""><span>${esc(k.name)}</span><time>${fmt(t)}</time></li>`;
   }).join('');
-  $('#r-stats').textContent = `Meilleur tour : ${fmt(player.stats.best || 0)} · Mini-turbos : ${player.stats.turbos}`;
+  $('#r-stats').textContent = `Meilleur tour : ${fmt(player.stats.best || 0)} · Mini-turbos : ${player.stats.turbos} · Pièces : ${player.coins}`;
   $('#results').hidden = false;
+  buildPodium(list.slice(0, 3));
+}
+
+/* ---------- le podium : les trois premiers, le gagnant fait une pose et les autres applaudissent ---------- */
+function removePodium() {
+  if (!podium) return;
+  scene.remove(podium.group);
+  podium.miis.forEach((a) => a.dispose());
+  podium = null;
+}
+function buildPodium(top3) {
+  removePodium();
+  const i = 30, h = track.heading(i);
+  const group = new THREE.Group();
+  group.position.copy(track.at(i, WALL + 9));
+  group.rotation.y = h - Math.PI / 2;   // il regarde la piste
+  const colors = [0xffd23a, 0xd8dde3, 0xe0a060];
+  const slots = [[0, 1.5], [-2.3, 1.0], [2.3, 0.65]];   // 1er au centre, 2e à gauche, 3e à droite
+  const miis = [];
+  top3.forEach((k, r) => {
+    const [x, hgt] = slots[r];
+    const cv = document.createElement('canvas'); cv.width = cv.height = 64;
+    const g = cv.getContext('2d'); g.fillStyle = '#fff'; g.font = '900 48px Nunito, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(String(r + 1), 32, 36);
+    const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
+    const side = new THREE.MeshLambertMaterial({ color: colors[r] });
+    const block = new THREE.Mesh(new THREE.BoxGeometry(2.1, hgt, 2), [side, side, side, side, new THREE.MeshLambertMaterial({ color: colors[r], map: tex }), side]);
+    block.position.set(x, hgt / 2, 0);
+    group.add(block);
+    const a = new MiiActor(renderer, b64ToBytes(k.b64));
+    a.root.scale.setScalar(0.09);
+    a.root.position.set(x, hgt, 0);
+    a.root.traverse((o) => { o.frustumCulled = false; });
+    a.blinkPhase = r;
+    if (r === 0) { a.play('Pose.05', 0.2); a.idle(EXPR.LIKE); } else { a.idle(EXPR.HAPPY); }
+    group.add(a.root);
+    miis.push(a);
+  });
+  scene.add(group);
+  podium = { group, miis, center: group.position.clone() };
+  fireworkT = 0.3;
+}
+function updatePodium(dt, t) {
+  if (!podium) return;
+  podium.miis.forEach((a, r) => {
+    a.update(dt, t);
+    if (r === 0) { if (Math.floor(t / 2.4) % 2) a.pose({ l: [0.2, -0.45, 0.1, -0.9], r: [0.2, -0.45, 0.1, -0.9] }); }   // le gagnant lève les bras
+    else { const v = [1.25, 0.45, 0.6 + Math.sin(t * 18 + r) * 0.25]; a.pose({ l: v, r: v }); }   // les autres applaudissent
+  });
 }
 
 /** Temps estimé pour ceux qui n'ont pas encore fini (d'après ce qu'il leur reste à rouler). */
@@ -282,6 +360,73 @@ function cheer(big) {
    La boucle
    ===================================================================== */
 const _f = new THREE.Vector3(), _look = new THREE.Vector3(), _cam = new THREE.Vector3();
+let camSide = 0;
+
+/** Qui a doublé qui ? Le Mii doublé se retourne et réagit (selon son affinité avec toi). */
+function overtakes() {
+  const order = standings();
+  if (lastOrder.length === order.length) {
+    const before = lastOrder.indexOf(player), now = order.indexOf(player);
+    if (now < before) {   // tu viens de doubler quelqu'un
+      for (const k of lastOrder.slice(now, before)) {
+        if (k === player) continue;
+        k.lookBack = 1.2;
+        k.feel(k.rel === 'ami' ? EXPR.SMILE : k.rel === 'ennemi' ? EXPR.ANGER_OPEN_MOUTH : EXPR.SURPRISE_OPEN_MOUTH, 1.6);
+      }
+      player.feel(EXPR.HAPPY, 1);
+    } else if (now > before) {
+      player.feel(EXPR.SORROW, 1);
+      for (const k of order.slice(before, now)) if (k !== player) k.feel(EXPR.HAPPY, 1.2);
+    }
+  }
+  lastOrder = order;
+}
+
+/** L'objet en main (en haut) et le bouton « objet » (en bas). */
+let slotKey = '';
+function updateSlot() {
+  const rolling = player.rolling > 0;
+  const shown = rolling ? ['banana', 'shell', 'mushroom', 'star'][Math.floor(performance.now() / 90) % 4] : player.item;
+  const key = `${rolling}|${shown}`;
+  if (key === slotKey) return;
+  const was = slotKey; slotKey = key;
+  const href = shown ? `#o-${shown}` : '';
+  $('#slot-icon').setAttribute('href', href);
+  $('#use-icon').setAttribute('href', href);
+  $('#slot').classList.toggle('rolling', rolling);
+  $('#use').disabled = !player.item || rolling;
+  if (!rolling && shown && was.startsWith('true')) { const s = $('#slot'); s.classList.remove('ready'); void s.offsetWidth; s.classList.add('ready'); }
+}
+
+/* ---------- l'effet de vitesse : des traits sur les bords de l'écran ---------- */
+const speedCv = $('#speed'), sctx = speedCv.getContext('2d');
+const streaks = Array.from({ length: 46 }, () => ({ a: Math.random() * Math.PI * 2, r: Math.random(), l: 0.1 + Math.random() * 0.15 }));
+function drawSpeed(dt) {
+  const w = speedCv.clientWidth, h = speedCv.clientHeight;
+  if (speedCv.width !== w) { speedCv.width = w; speedCv.height = h; }
+  sctx.clearRect(0, 0, w, h);
+  if (state !== 'race' && state !== 'done') return;
+  const k = player;
+  const strength = clamp((k.speed - 27) / 14, 0, 1) * 0.6 + (k.boost > 0 ? 0.5 : 0) + (k.starT > 0 ? 0.3 : 0);
+  if (strength <= 0.02) return;
+  const cx = w / 2, cy = h * 0.45, R = Math.hypot(w, h) / 2;
+  sctx.lineCap = 'round';
+  for (const s of streaks) {
+    s.r += dt * (1.6 + strength * 2.5);
+    if (s.r > 1) { s.r = 0.55 + Math.random() * 0.1; s.a = Math.random() * Math.PI * 2; s.l = 0.1 + Math.random() * 0.15; }
+    const r0 = R * s.r, r1 = R * Math.min(1.1, s.r + s.l);
+    sctx.strokeStyle = k.boost > 0 ? `rgba(255, 220, 160, ${0.5 * strength})` : `rgba(255, 255, 255, ${0.45 * strength})`;
+    sctx.lineWidth = 1.5 + strength * 2.5;
+    sctx.beginPath();
+    sctx.moveTo(cx + Math.cos(s.a) * r0, cy + Math.sin(s.a) * r0 * 0.75);
+    sctx.lineTo(cx + Math.cos(s.a) * r1, cy + Math.sin(s.a) * r1 * 0.75);
+    sctx.stroke();
+  }
+  // un léger voile sur les bords (impression de flou de vitesse)
+  const g = sctx.createRadialGradient(cx, cy, R * 0.45, cx, cy, R);
+  g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(1, `rgba(255,255,255,${0.22 * strength})`);
+  sctx.fillStyle = g; sctx.fillRect(0, 0, w, h);
+}
 
 function frame() {
   const dt = Math.min(clock.getDelta(), 1 / 30);
@@ -327,9 +472,22 @@ function frame() {
     }
     k.animate(dt, t, fx);
   }
-  if (racing) collide();
+  if (racing) {
+    collide();
+    items.update(dt, t, karts, (k) => standings().indexOf(k) + 1);
+    overtakes();
+  }
+  // feux d'artifice (arrivée, podium)
+  if ((state === 'done' || state === 'results') && (fireworkT -= dt) <= 0) {
+    fireworkT = 0.45 + Math.random() * 0.5;
+    const base = podium ? podium.center.clone().add(new THREE.Vector3((Math.random() - 0.5) * 16, 0, (Math.random() - 0.5) * 16)) : track.at(Math.random() * 20 - 10, (Math.random() - 0.5) * 24);
+    fx.firework(base);
+  }
   fx.update(dt);
-  track.update(dt, t);
+  track.update(dt, t, racing ? player.root.position : null);
+  updatePodium(dt, t);
+  if (racing || state === 'count') updateSlot();
+  drawSpeed(dt);
   for (const a of spectators) a.update(dt, t);
 
   if (state === 'done' && stateT > 3.2) showResults();
@@ -349,8 +507,11 @@ function playerEvents(ev) {
     if (e === 'hop') audio.hop();
     if (e === 'level') {
       audio.level(player.level);
-      if (player.level === 3) pop('Ultra mini-turbo', '#d060ff');
+      if (player.level === 3) { pop('Ultra mini-turbo', '#d060ff'); player.feel(EXPR.LIKE, 1.6); }
     }
+    if (e === 'ramp') audio.hop();
+    if (e === 'trick') { audio.trick(); pop('Figure !', '#ffd23a'); player.feel(EXPR.HAPPY, 1.2); }
+    if (e === 'trickBoost') audio.turbo(1);
     if (e === 'turbo') { audio.turbo(Math.max(1, lastLevel)); pop(['', 'Mini-turbo', 'Super mini-turbo', 'Ultra mini-turbo'][Math.max(1, lastLevel)], `#${SPARK_COLORS[Math.max(1, lastLevel)].getHexString()}`); }
     if (e === 'pad') audio.pad();
     if (e === 'bump') audio.bump();
@@ -384,6 +545,9 @@ function collide() {
     a.x -= dx / d * push; a.z -= dz / d * push;
     b.x += dx / d * push; b.z += dz / d * push;
     const ka = karts[i], kb = karts[j];
+    // l'étoile renverse tout le monde
+    if (ka.starT > 0 && kb.starT <= 0) { items.hit(kb, ka); continue; }
+    if (kb.starT > 0 && ka.starT <= 0) { items.hit(ka, kb); continue; }
     // celui de derrière perd un peu de vitesse
     const behind = ka.progress < kb.progress ? ka : kb;
     behind.speed *= 0.985;
@@ -398,7 +562,13 @@ function collide() {
 /* ---------- caméra ---------- */
 function updateCamera(dt, t) {
   const k = player, p = k.root.position;
-  if (state === 'menu' || state === 'loading' || state === 'results') {
+  if (state === 'results' && podium) {
+    // le podium, vu de face, la caméra tourne doucement autour
+    const c = podium.center, a = podium.group.rotation.y + Math.sin(t * 0.4) * 0.5;
+    camera.position.set(c.x + Math.sin(a) * 7.5, 3.4, c.z + Math.cos(a) * 7.5);
+    camera.lookAt(c.x, 2.2, c.z);
+    camera.fov = 50;
+  } else if (state === 'menu' || state === 'loading' || state === 'results') {
     // on tourne doucement autour de ton kart
     const a = t * 0.35;
     camera.position.set(p.x + Math.sin(a) * 6.5, 2.4, p.z + Math.cos(a) * 6.5);
@@ -428,8 +598,11 @@ function updateCamera(dt, t) {
     camYaw += wrap(k.heading + k.slide * 0.45 - camYaw) * (1 - Math.exp(-dt * 6));
     const f = _f.set(Math.sin(camYaw), 0, Math.cos(camYaw));
     const dist = 5.6 + k.speed * 0.025;
-    camera.position.set(p.x - f.x * dist, 2.35 + k.visual.position.y * 0.5, p.z - f.z * dist);
-    camera.lookAt(_look.set(p.x + f.x * 4, 1.15, p.z + f.z * 4));
+    // pendant un dérapage, la caméra se décale vers l'extérieur et regarde l'intérieur du virage
+    camSide += ((k.drift ? k.drift * 1.5 : 0) - camSide) * Math.min(1, dt * 2.5);
+    const lx = f.z, lz = -f.x;   // vers la gauche
+    camera.position.set(p.x - f.x * dist + lx * camSide, 2.35 + k.visual.position.y * 0.5, p.z - f.z * dist + lz * camSide);
+    camera.lookAt(_look.set(p.x + f.x * 4 - lx * camSide * 0.8, 1.15, p.z + f.z * 4 - lz * camSide * 0.8));
     const fov = 60 + (k.boost > 0 ? 10 : 0) + k.speed * 0.08;
     camera.fov += (fov - camera.fov) * Math.min(1, dt * 4);
   }
@@ -451,11 +624,14 @@ function updateHud() {
     posEl.classList.remove('pop'); void posEl.offsetWidth; posEl.classList.add('pop');
   }
   document.querySelectorAll('.gauge i').forEach((g, i) => g.classList.toggle('on', player.drift && player.level > i));
+  $('#coins').textContent = player.coins;
   const key = list.map((k) => k.name + k.finished).join();
   if (key !== boardKey) { boardKey = key; renderBoard(list); }
 }
 function renderBoard(list = standings()) {
-  $('#board').innerHTML = list.map((k, i) => `<li class="${k === player ? 'me' : ''} ${k.finished ? 'done' : ''}" style="--c:#${k.color.getHexString()}"><b>${i + 1}</b><img src="${k.icon.src}" alt=""><span>${esc(k.name)}</span></li>`).join('');
+  // un cœur à côté de tes amis (affinité du jour 1), une flamme à côté de tes rivaux
+  const rel = (k) => (k.rel === 'ami' ? '<svg class="rel" aria-label="ami"><use href="#i-heart"/></svg>' : k.rel === 'ennemi' ? '<svg class="rel" aria-label="rival"><use href="#i-flame"/></svg>' : '');
+  $('#board').innerHTML = list.map((k, i) => `<li class="${k === player ? 'me' : ''} ${k.finished ? 'done' : ''}" style="--c:#${k.color.getHexString()}"><b>${i + 1}</b><img src="${k.icon.src}" alt=""><span>${esc(k.name)}</span>${rel(k)}</li>`).join('');
 }
 
 /* ---------- la carte du circuit (écran du bas) ---------- */
@@ -553,6 +729,22 @@ useRenderer(renderer);
 loadPool();
 track = new Track(scene);
 fx = new Fx(scene);
+fx.onBoom = () => { audio.boom(); track.cheer(1.5); };
+items = new Items(scene, track, fx, audio);
+// ce qui arrive avec les objets : sons et messages pour toi, réactions des Mii
+items.onEvent = (kind, k, extra) => {
+  if (kind === 'coin' && k === player) audio.coin();
+  if (kind === 'box' && k === player) audio.box();
+  if (kind === 'got' && k === player) audio.got();
+  if (kind === 'hit') {
+    if (k === player) { audio.hit(); pop('Aïe !', '#ff5b8d'); }
+    else if (extra === player) { pop(`Touché : ${k.name} !`, '#39c27a'); audio.tone(880, 0.12, { vol: 0.12 }); }
+    if (extra && extra !== k) extra.feel(EXPR.HAPPY, 1.2);
+  }
+  if (kind === 'use' && k === player && extra === 'star') pop('Étoile !', '#ffd23a');
+  if (kind === 'use' && k === player && extra === 'mushroom') pop('Champignon !', '#e8323c');
+};
+track.buildCrowd(pool.map((_, i) => iconImage(i).src));
 for (let s = 0; s < RACERS; s++) karts.push(new Kart(renderer, scene, b64ToBytes(pool[s].b64), { name: pool[s].name }));
 karts.forEach((k, s) => { k.poolIndex = s; });
 buildSpectators();

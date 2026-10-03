@@ -45,6 +45,12 @@ export class Track {
     this.buildWalls();
     this.buildStart();
     this.buildPads();
+    // une rampe de saut (on peut y faire une figure)
+    this.ramps = [{ i: Math.round(0.56 * N) }];
+    this.buildRamps();
+    this.buildBalloons();
+    this.buildBunting();
+    this.crowd = [];
     this.buildTrees();
     this.buildHills();
     this.buildClouds();
@@ -337,8 +343,115 @@ export class Track {
     }
   }
 
-  update(dt, t) {
+  /** La rampe : un plan incliné rayé jaune et noir, sur toute la largeur de la route. */
+  buildRamps() {
+    const tex = canvasTex(64, 64, (g, w, h) => {
+      for (let k = 0; k < 8; k++) { g.fillStyle = k % 2 ? '#1d1d22' : '#ffc21a'; g.fillRect(k * 8, 0, 8, h); }
+    });
+    tex.repeat.set(4, 1);
+    const side = new THREE.Shape();
+    side.moveTo(0, 0); side.lineTo(4.5, 0); side.lineTo(4.5, 0.6); side.closePath();
+    const geo = new THREE.ExtrudeGeometry(side, { depth: ROAD * 2 + 1, bevelEnabled: false });
+    geo.translate(0, 0, -(ROAD * 2 + 1) / 2);
+    geo.rotateY(-Math.PI / 2);
+    for (const r of this.ramps) {
+      const m = new THREE.Mesh(geo, [new THREE.MeshLambertMaterial({ map: tex }), new THREE.MeshLambertMaterial({ color: 0x3a3a44 })]);
+      m.position.copy(this.at(r.i, 0)).setY(0.01);
+      m.rotation.y = this.heading(r.i);
+      this.scene.add(m);
+    }
+  }
+
+  /** Des grappes de ballons le long de la ligne droite du départ. */
+  buildBalloons() {
+    const cols = [0xff5b8d, 0xffd23a, 0x4aa8ff, 0x39c27a, 0x9a6bff, 0xff9b1f];
+    this.balloons = [];
+    const string = new THREE.LineBasicMaterial({ color: 0xffffff });
+    for (let k = -6; k <= 6; k++) {
+      const i = (k * 22 + N) % N;
+      for (const s of [1, -1]) {
+        const base = this.at(i, s * (WALL + 1.2));
+        const group = new THREE.Group();
+        group.position.copy(base);
+        for (let b = 0; b < 3; b++) {
+          const top = new THREE.Vector3((b - 1) * 0.6, 4.2 + b * 0.5, (b % 2) * 0.4);
+          const ball = new THREE.Mesh(new THREE.SphereGeometry(0.55, 14, 10), new THREE.MeshStandardMaterial({ color: cols[(k + b + 6 + (s > 0 ? 3 : 0)) % cols.length], roughness: 0.25 }));
+          ball.scale.y = 1.2; ball.position.copy(top);
+          const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0.9, 0), top.clone().setY(top.y - 0.6)]), string);
+          group.add(ball, line);
+        }
+        this.scene.add(group);
+        this.balloons.push({ group, phase: Math.random() * 6 });
+      }
+    }
+  }
+
+  /** Des guirlandes de petits drapeaux tendues au-dessus de la piste. */
+  buildBunting() {
+    const cols = [0xff5b8d, 0xffd23a, 0x4aa8ff, 0x39c27a, 0xffffff];
+    const pole = new THREE.MeshLambertMaterial({ color: 0xf2f2f2 });
+    const flagGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-0.35, 0, 0), new THREE.Vector3(0.35, 0, 0), new THREE.Vector3(0, -0.8, 0)]);
+    flagGeo.computeVertexNormals();
+    this.flags = [];
+    for (const f of [0.25, 0.42, 0.66, 0.84]) {
+      const i = Math.round(f * N);
+      const a = this.at(i, WALL + 0.8), b = this.at(i, -(WALL + 0.8));
+      for (const p of [a, b]) {
+        const m = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.15, 7.5, 8), pole);
+        m.position.copy(p).setY(3.75); this.scene.add(m);
+      }
+      const n = 18;
+      for (let k = 1; k < n; k++) {
+        const u = k / n;
+        const p = new THREE.Vector3().lerpVectors(a, b, u);
+        p.y = 7.2 - Math.sin(u * Math.PI) * 1.4;   // la guirlande pend au milieu
+        const flag = new THREE.Mesh(flagGeo, new THREE.MeshLambertMaterial({ color: cols[k % cols.length], side: THREE.DoubleSide }));
+        flag.position.copy(p);
+        flag.rotation.y = this.heading(i);
+        this.scene.add(flag);
+        this.flags.push({ flag, phase: k * 0.7 });
+      }
+    }
+  }
+
+  /** Le public le long de la piste : des Mii (leur tête en image) qui sautent quand tu passes. */
+  buildCrowd(icons) {
+    const loader = new THREE.TextureLoader();
+    const textures = icons.map((src) => { const t = loader.load(src); t.colorSpace = THREE.SRGBColorSpace; return t; });
+    const bodyGeo = new THREE.CapsuleGeometry(0.45, 0.7, 4, 10);
+    const cols = [0xff5b8d, 0xffd23a, 0x4aa8ff, 0x39c27a, 0x9a6bff, 0xff9b1f, 0xffffff];
+    let n = 0;
+    for (const [f, side] of [[0.15, 1], [0.15, -1], [0.45, -1], [0.7, 1], [0.93, 1]]) {
+      const i0 = Math.round(f * N);
+      for (let k = 0; k < 9; k++) {
+        const p = this.at(i0 + k * 4, side * (WALL + 2.2 + (k % 2) * 1.3));
+        const g = new THREE.Group();
+        const body = new THREE.Mesh(bodyGeo, new THREE.MeshLambertMaterial({ color: cols[n % cols.length] }));
+        body.position.y = 0.9;
+        const head = new THREE.Sprite(new THREE.SpriteMaterial({ map: textures[n % textures.length] }));
+        head.scale.setScalar(1.5); head.position.y = 2.3;
+        g.add(body, head);
+        g.position.copy(p);
+        this.scene.add(g);
+        this.crowd.push({ g, base: p.clone(), phase: Math.random() * 6, excite: 0 });
+        n++;
+      }
+    }
+  }
+
+  /** Le public saute quand un kart précis (le joueur) passe près de lui ; le feu d'artifice le fait aussi sauter. */
+  cheer(seconds = 3) { for (const c of this.crowd) c.excite = Math.max(c.excite, seconds); }
+
+  update(dt, t, focus = null) {
     this.padTex.offset.y = -t * 2.2;
     for (const c of this.clouds) { c.position.x += dt * 2; if (c.position.x > 320) c.position.x = -320; }
+    for (const b of this.balloons) { b.group.position.y = Math.sin(t * 1.3 + b.phase) * 0.25; b.group.rotation.z = Math.sin(t * 0.9 + b.phase) * 0.06; }
+    for (const f of this.flags) f.flag.rotation.x = Math.sin(t * 3 + f.phase) * 0.35;
+    for (const c of this.crowd) {
+      if (focus && c.base.distanceToSquared(focus) < 28 * 28) c.excite = Math.max(c.excite, 1.2);
+      c.excite = Math.max(0, c.excite - dt);
+      const jump = c.excite > 0 ? Math.abs(Math.sin(t * 9 + c.phase)) * 0.9 : Math.abs(Math.sin(t * 2 + c.phase)) * 0.08;
+      c.g.position.y = c.base.y + jump;
+    }
   }
 }

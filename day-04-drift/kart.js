@@ -1,8 +1,8 @@
 // Drift · un kart : la carrosserie, le Mii au volant, et la conduite (accélération, virages, dérapage, turbo).
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import { MiiActor, EXPR } from '../day-01-pulse/mii3d.js?v=2';
-import { ROAD, WALL } from './track.js?v=1';
+import { MiiActor, EXPR } from '../day-01-pulse/mii3d.js?v=3';
+import { ROAD, WALL } from './track.js?v=2';
 
 export const MAX_SPEED = 30;          // vitesse de pointe (unités/s), ×cylindrée
 const ACCEL = 15;
@@ -220,6 +220,14 @@ export class Kart {
     this.wasDrift = false;
     this.stats = { turbos: 0, best: 0 };
     this.mood = 0;
+    this.coins = 0;          // pièces ramassées (0 à 10) : chacune ajoute un peu de vitesse de pointe
+    this.item = null;        // objet en main
+    this.starT = 0;          // temps d'invincibilité restant (étoile)
+    this.spinT = 0;          // tête-à-queue en cours (touché par une banane ou une carapace)
+    this.air = false;        // en l'air après une rampe
+    this.trickDone = false;
+    this.trickT = 0;         // figure en cours (animation)
+    this.lookBack = 0;       // le Mii se retourne (on vient de le doubler)
     this.mii.idle(EXPR.NORMAL);
     this.root.rotation.y = heading;
   }
@@ -239,17 +247,34 @@ export class Kart {
     const ev = [];
     this.n = track.n;
     this.wallCd = Math.max(0, (this.wallCd ?? 0) - dt);
-    const top = MAX_SPEED * opts.speedMul * (this.human ? 1 : opts.botMul ?? 1);
+    // vitesse de pointe : +1,2 % par pièce, +12 % avec l'étoile
+    const top = MAX_SPEED * opts.speedMul * (this.human ? 1 : opts.botMul ?? 1) * (1 + 0.012 * (this.coins ?? 0)) * (this.starT > 0 ? 1.12 : 1);
+
+    // --- tête-à-queue : on ne contrôle plus rien pendant un moment, et on freine
+    if (this.spinT > 0) {
+      this.spinT -= dt;
+      input = { steer: 0, drift: false, brake: true, assist: input.assist };
+      this.drift = 0; this.charge = 0; this.level = 0;
+    }
 
     // --- saut et début du dérapage (comme dans les jeux de kart : on saute, on atterrit en glissant)
-    if (input.drift && !this.wasDrift && this.y <= 0 && this.speed > 6) {
+    const press = input.drift && !this.wasDrift;
+    if (press && this.y <= 0 && !this.air && this.speed > 6) {
       this.vy = 4.6; ev.push('hop');
     }
+    // une figure en l'air (après une rampe) : appuyer sur Drift → petit turbo à l'atterrissage
+    if (press && this.air && !this.trickDone) { this.trickDone = true; this.trickT = 0.55; ev.push('trick'); }
     this.wasDrift = input.drift;
     this.vy -= 22 * dt;
     this.y = Math.max(0, this.y + this.vy * dt);
     const grounded = this.y <= 0;
-    if (grounded) this.vy = 0;
+    if (grounded) {
+      this.vy = 0;
+      if (this.air) {
+        this.air = false;
+        if (this.trickDone) { this.boost = Math.max(this.boost, 0.8); ev.push('trickBoost'); }
+      }
+    }
     if (grounded && input.drift && !this.drift && Math.abs(input.steer) > 0.3 && this.speed > 11) {
       this.drift = Math.sign(input.steer);
       this.charge = 0; this.level = 0;
@@ -332,6 +357,16 @@ export class Kart {
       if (into > 2) { this.drift = 0; this.charge = 0; this.level = 0; }
     }
 
+    // --- rampes : on décolle (et on peut faire une figure)
+    for (const r of track.ramps ?? []) {
+      let di = this.idx - r.i;
+      if (di > n / 2) di -= n; else if (di < -n / 2) di += n;
+      if (di >= 0 && di <= 4 && grounded && !this.air && this.speed > 12 && Math.abs(lat) < 8) {
+        this.vy = 7 + this.speed * 0.06; this.air = true; this.trickDone = false; this.y = 0.01;
+        ev.push('ramp');
+      }
+    }
+
     // --- dalles d'accélération
     for (const pad of track.pads) {
       let di = this.idx - pad.i;
@@ -350,12 +385,18 @@ export class Kart {
     this.root.rotation.y = this.heading;
     const slideTarget = this.drift ? -this.drift * 0.42 : 0;
     this.slide += (slideTarget - this.slide) * Math.min(1, dt * 8);
-    this.visual.rotation.y = this.slide;
+    // tête-à-queue : deux tours sur lui-même ; figure : une vrille
+    this.visual.rotation.y = this.slide + (this.spinT > 0 ? (0.95 - this.spinT) * Math.PI * 4.2 : 0);
+    this.trickT = Math.max(0, this.trickT - dt);
     // secousses : moteur, herbe, choc
     const shake = (this.offroad ? 0.05 : 0.012) * Math.min(1, this.speed / 10) + this.bump * 0.15;
     this.bump = Math.max(0, this.bump - dt);
     this.visual.position.y = this.y + Math.sin(t * 38 + this.idx) * shake;
-    this.visual.rotation.z = (this.drift ? this.drift * 0.08 : this.steerShown * 0.05) + Math.sin(t * 31) * shake * 0.5;
+    this.visual.rotation.z = (this.drift ? this.drift * 0.08 : this.steerShown * 0.05) + Math.sin(t * 31) * shake * 0.5
+      + (this.trickT > 0 ? (1 - this.trickT / 0.55) * Math.PI * 2 : 0);
+    // étoile : le kart clignote aux couleurs de l'arc-en-ciel
+    if (this.starT > 0) { this.body.userData.recolor(new THREE.Color().setHSL((t * 2.5) % 1, 1, 0.55)); this.starred = true; }
+    else if (this.starred) { this.body.userData.recolor(this.color); this.starred = false; }
     this.visual.rotation.x = this.boost > 0 ? -0.05 : 0;
     this.shadow.scale.setScalar(1 - Math.min(0.4, this.y * 0.25));
     this.shadow.scale.y *= 1.15;
@@ -374,13 +415,22 @@ export class Kart {
       this.armL.rotation.set(this.steerShown * 0.2, -1.2, -0.5);
       this.armR.rotation.set(-this.steerShown * 0.2, 1.2, 0.5);
     }
-    this.mii.root.rotation.y = -this.steerShown * 0.25;   // il se penche dans le virage
+    this.lookBack = Math.max(0, this.lookBack - dt);
+    // il se penche dans le virage… ou se retourne quand on vient de le doubler
+    this.mii.root.rotation.y = -this.steerShown * 0.25 + (this.lookBack > 0 ? Math.sin(Math.min(1, this.lookBack) * Math.PI) * 1.4 : 0);
     this.mii.root.rotation.z = (this.drift ? this.drift : this.steerShown) * 0.12;
     if (this.mood > 0) { this.mood -= dt; if (this.mood <= 0) this.mii.idle(EXPR.NORMAL); }
 
     if (!fx) return;
     const back = _w.set(-0.6, 0.15, -0.95).applyMatrix4(this.visual.matrixWorld);
     const back2 = new THREE.Vector3(0.6, 0.15, -0.95).applyMatrix4(this.visual.matrixWorld);
+    // traces de pneus sur la piste pendant le dérapage (et pendant un tête-à-queue)
+    if (fx.skids) {
+      if ((this.drift || this.spinT > 0) && this.y <= 0 && !this.offroad) fx.skids.mark(this, back, back2);
+      else fx.skids.lift(this);
+    }
+    // étoile : des étincelles dorées partout
+    if (this.starT > 0 && Math.random() < 0.7) fx.spark(back, new THREE.Vector3((Math.random() - 0.5) * 3, 2 + Math.random() * 2, (Math.random() - 0.5) * 3), new THREE.Color().setHSL(Math.random(), 1, 0.65), 0.4, 0.4);
     // étincelles du dérapage, sous les roues arrière
     if (this.drift && this.y <= 0) {
       const c = SPARK_COLORS[this.level];

@@ -23,15 +23,31 @@ Pendant le dérapage, braquer vers l'intérieur serre le virage (et charge plus 
 - **Clavier** :
   - flèches ou A / D pour tourner ;
   - Espace (ou Maj, ou X) pour sauter et déraper ;
-  - flèche du bas pour freiner.
+  - flèche du bas pour freiner ;
+  - flèche du haut (ou E, W, Z) pour utiliser ton objet.
 - **Tactile** : les boutons de l'écran du bas. Le kart accélère tout seul.
 - Choisis **ton pilote** parmi tes Mii du jour 1 (ou des Mii au hasard si tu n'en as pas créé), et la **cylindrée** : 50cc, 100cc ou 150cc.
 - Les **dalles orange** du circuit donnent un coup de turbo. **L'herbe** ralentit beaucoup. Les **murets** font rebondir.
 - **Turbo de départ** : appuie sur Drift pendant le « 1 » du compte à rebours. Trop tôt, ça ne marche pas.
 - Au **dernier tour**, la musique accélère et monte d'un ton, comme dans les vrais jeux de kart.
-- À l'arrivée : le classement avec les temps, ton meilleur tour et ton nombre de mini-turbos.
+- À l'arrivée : feux d'artifice, puis le **podium** (le gagnant lève les bras, les deux autres applaudissent) et le classement avec les temps, ton meilleur tour, tes mini-turbos et tes pièces.
+
+## Objets, pièces et rampe
+
+- **Boîtes « ? »** (trois rangées sur le circuit) : on tire un objet. Les derniers ont plus de chances d'avoir un bon objet.
+  - **Banane** : posée derrière toi ; celui qui roule dessus fait un tête-à-queue.
+  - **Carapace verte** : part tout droit et rebondit sur les murets.
+  - **Champignon** : un coup de turbo.
+  - **Étoile** : invincible et plus rapide pendant 6 secondes, le kart clignote en arc-en-ciel et renverse ceux qu'il touche.
+- **Pièces** (10 au maximum) : chacune ajoute un peu de vitesse de pointe ; on en perd 3 quand on est touché.
+- **Rampe** : on décolle ; appuie sur Drift en l'air pour faire une **figure**, et tu gagnes un petit turbo à l'atterrissage.
+- **Affinités du jour 1** : à côté des noms, un cœur pour tes amis et une flamme pour tes rivaux. Un rival te colle aux roues, un ami se pousse pour te laisser passer et ne te vise pas avec ses carapaces. Quand tu doubles quelqu'un, il se retourne et réagit selon votre affinité.
+- **Sensations** : traits de vitesse sur les bords de l'écran (plus forts pendant un turbo), traces de pneus qui s'effacent doucement, caméra qui se décale pendant le dérapage pour montrer l'intérieur du virage.
+- **Un circuit vivant** : ballons, guirlandes de drapeaux au-dessus de la piste, public qui saute quand tu passes.
 
 ## Comment c'est codé
+
+- [`items.js`](items.js) : les boîtes, les pièces, les bananes et carapaces sur la piste, et l'usage des objets par les pilotes ordinateur.
 
 - [`track.js`](track.js) : le circuit.
   - Le tracé est une courbe fermée (`CatmullRomCurve3`), découpée en 1 200 points. À partir de ces points, on fabrique la route, les vibreurs rouges et blancs et les murets bleus et blancs, comme des rubans.
