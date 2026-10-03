@@ -70,8 +70,7 @@ function buildBody(color) {
   noseGeo.translate(0, 0, -0.41);
   noseGeo.rotateY(-Math.PI / 2);          // le profil était dans le plan (z, y) : on le tourne vers l'avant (+z)
   add(new THREE.Mesh(noseGeo, paint), 0, 0, 0);
-  // une bande de course blanche sur le nez, et l'emblème
-  add(new THREE.Mesh(new RoundedBoxGeometry(0.2, 0.03, 1.15, 2, 0.012), white), 0, 0.655, 0.86, -0.17);
+  // l'emblème sur le nez
   add(new THREE.Mesh(new THREE.CircleGeometry(0.15, 24), new THREE.MeshStandardMaterial({ map: emblem(), roughness: 0.4 })), 0, 0.5, 1.47, -0.35);
   // phares
   const lamp = new THREE.MeshStandardMaterial({ color: 0xfff3c4, emissive: 0xfff0b0, emissiveIntensity: 0.9 });
