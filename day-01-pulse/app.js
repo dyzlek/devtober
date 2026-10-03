@@ -2,7 +2,7 @@
 import {
   initMii, MiiScene, EXPR, renderIcon, randomMii, toCharInfo, parseCode,
   getField, setField, getName, setName, FIELDS, bytesToB64, b64ToBytes,
-} from './mii3d.js?v=1.2c';
+} from './mii3d.js?v=1.3b';
 
 const $ = (s, el = document) => el.querySelector(s);
 const STORE = 'devtober-pulse-miis-v3';
@@ -209,7 +209,36 @@ const music = {
   rise(level) { this.level = level; if (this.mode !== 'rise') { this.mode = 'rise'; this.restart(150); } },
   hesitate() { if (this.mode !== 'hesitate') { this.mode = 'hesitate'; this.restart(95); } },
   restart(ms) { clearInterval(this.timer); this.timer = setInterval(() => this.tick(), ms); },
-  stop() { clearInterval(this.timer); this.timer = null; },
+  stop() { clearInterval(this.timer); clearTimeout(this.timer); this.timer = null; },
+
+  /**
+   * Après le résultat : une petite boucle dont le tempo suit l'affinité (lente et triste en bas,
+   * rapide et joyeuse en haut). Le cœur bat sur chaque temps, et onBeat fait rebondir les Mii.
+   */
+  groove(score, onBeat) {
+    this.stop();
+    const bpm = 64 + score * 0.72;
+    const half = 60000 / bpm / 2;   // une croche
+    const prog = score >= 70 ? [[0, 4, 7], [7, 11, 14], [9, 12, 16], [5, 9, 12]]   // majeur, joyeux
+      : score >= 40 ? [[0, 4, 7], [5, 9, 12], [0, 4, 7], [7, 11, 14]]              // tranquille
+      : [[0, 3, 7], [5, 8, 12], [3, 7, 10], [-5, -2, 2]];                           // mineur, triste
+    const low = score < 40 ? -12 : 0;
+    let step = 0, next = performance.now();
+    const loop = () => {
+      const s = step++, chord = prog[Math.floor(s / 8) % 4];
+      if (score >= 40 || s % 2 === 0) tone(note(chord[[0, 1, 2, 1][s % 4]] + low), 0, 0.2, score >= 40 ? 0.045 : 0.05, 'triangle');
+      if (score >= 90 && s % 8 === 7) tone(note(chord[2] + 24), 0, 0.12, 0.03, 'sine');
+      if (s % 2 === 0) {
+        const strong = s % 8 === 0;
+        tone(note(chord[0] - 24 + low), 0, 0.35, strong ? 0.07 : 0.045, 'sine');
+        thump(strong ? 0.35 : 0.22);   // le cœur bat sur le temps
+        onBeat(strong);
+      }
+      next += half;
+      this.timer = setTimeout(loop, Math.max(0, next - performance.now()));
+    };
+    loop();
+  },
   tick() {
     const s = this.step++;
     if (this.mode === 'rise') {
@@ -603,16 +632,48 @@ function runTest() {
     $('.verdict', overlay).classList.add('show');
     jingle(r.score);
 
-    // Le cœur continue de battre : plus l'affinité est forte, plus le pouls est rapide
-    const bpm = 45 + r.score * 1.1;
-    heart.classList.remove('beat');
-    heart.style.setProperty('--period', `${60 / bpm}s`);
-    heart.classList.add('alive');
-
-    // Les Mii réagissent : plus c'est bas, plus ils se détestent ; plus c'est haut, plus ils s'aiment
-    scene3d.react(r.score);
+    // Les Mii jouent leur petite scène (une par palier de 10 %), puis le cœur bat avec la musique
+    scene3d.skit(r.score, md);
     if (r.score >= 75) sparkles(md);
     showBubbles(r.score, md, token);
+    afterResult(r.score, token);
+  }
+}
+
+/**
+ * Après le résultat : le cœur bat tout de suite au rythme de l'affinité,
+ * puis, à la fin du jingle, il se cale sur la petite musique avec les Mii.
+ */
+function afterResult(score, token) {
+  heart.classList.remove('beat');
+  heart.style.setProperty('--period', `${60 / (64 + score * 0.72)}s`);
+  heart.classList.add('alive');
+  setTimeout(() => {
+    if (token !== runToken) return;
+    heart.classList.remove('alive');
+    music.groove(score, (strong) => {
+      if (token !== runToken) return music.stop();
+      heart.classList.remove('beat'); void heart.getBoundingClientRect(); heart.classList.add('beat');
+      if (strong) scene3d.beat(); else scene3d.bump = Math.max(scene3d.bump, 0.55);
+    });
+  }, score >= 15 ? 1700 : 2700);   // le trombone raté est plus long
+}
+
+/** Les petits événements des scènes : une tape dans la main, une poussée. */
+function sceneEvent(kind) {
+  if (kind === 'clap') {
+    tone(1500, 0, 0.05, 0.12, 'square'); tone(2200, 0.02, 0.08, 0.06, 'triangle');
+    const heads = scene3d.headScreen();
+    if (heads.length < 2) return;
+    const ic = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    ic.setAttribute('class', 'float-icon ic fill amitie');
+    ic.innerHTML = '<use href="#i-star"/>';
+    ic.style.left = `${(heads[0].x + heads[1].x) / 2}%`;
+    ic.style.top = `${Math.min(heads[0].y, heads[1].y)}%`;
+    overlay.append(ic);
+    setTimeout(() => ic.remove(), 1800);
+  } else if (kind === 'push') {
+    tone(160, 0, 0.18, 0.3, 'sine', 70);
   }
 }
 
@@ -910,6 +971,7 @@ try {
 }
 preview = new MiiScene($('#preview-canvas'), { duo: false });
 scene3d = new MiiScene($('#stage-canvas'));
+scene3d.onEvent = sceneEvent;
 // Demande au navigateur de ne pas effacer de lui-même les Mii sauvegardés
 navigator.storage?.persist?.().catch(() => {});
 load();

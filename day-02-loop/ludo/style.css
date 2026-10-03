@@ -286,4 +286,23 @@ button { cursor: pointer; }
   .bezel-bottom { padding: 1.6cqw; border-radius: 2cqw; }
   .sys-btns span { font-size: 2.4cqw; padding: 1.4cqw 0; }
 }
+/* ---------- Places : joueur ou bot ---------- */
+button.seat-label { border: none; background: none; padding: .2cqw 1.2cqw; border-radius: 99px; font: inherit; font-size: .75em; font-weight: 900; color: var(--c); text-transform: uppercase; letter-spacing: .06em; cursor: pointer; }
+button.seat-label[aria-pressed="true"] { background: var(--c); color: #fff; }
+button.seat-label:hover { outline: .3cqw dashed var(--c); }
+
+/* ---------- À plusieurs : passer la console ---------- */
+.pass {
+  position: absolute; inset: 0; z-index: 6; display: grid; place-content: center; justify-items: center; gap: 1.6cqw; text-align: center;
+  background: repeating-linear-gradient(-45deg, var(--cream) 0 3cqw, var(--cream-2) 3cqw 6cqw);
+  border: 1.2cqw solid var(--c); border-radius: 1cqw;
+}
+.pass[hidden] { display: none; }
+.pass-label { margin: 0; font-weight: 900; color: #9a7a4a; text-transform: uppercase; letter-spacing: .08em; }
+.pass img { width: 18cqw; height: 18cqw; border-radius: 50%; background: color-mix(in srgb, var(--c) 25%, #fff); box-shadow: 0 0 0 1cqw var(--c); animation: passPop .5s cubic-bezier(.3, 1.8, .5, 1); }
+.pass-name { margin: 0; font-size: 1.5em; }
+.pass-name b { color: var(--c); font-weight: 900; }
+.pass-name span { font-size: .6em; font-weight: 800; color: #9a7a4a; }
+@keyframes passPop { from { transform: scale(.4); } }
+
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
