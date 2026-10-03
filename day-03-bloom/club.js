@@ -149,7 +149,7 @@ export class Club {
     const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
     this.sign = new THREE.Mesh(new THREE.PlaneGeometry(12, 3), new THREE.MeshBasicMaterial({ map: tex, transparent: true, color: 0xffffff }));
     this.sign.position.set(0, 13.6, -15.8);
-    s.add(this.sign);
+    // (l'enseigne « BLOOM » n'est plus affichée : la fleur de néon suffit)
   }
 
   buildFloor() {
