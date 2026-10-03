@@ -5,7 +5,8 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { MiiActor, useRenderer, EXPR } from '../day-01-pulse/mii3d.js?v=2';
+import { MiiActor, useRenderer, EXPR, bytesToB64, getName } from '../day-01-pulse/mii3d.js?v=3';
+import { affinity } from '../day-02-loop/ludo/affinity.js?v=1';
 
 const COLS = 10, ROWS = 8, TILE = 2;          // la piste : 10 × 8 dalles de 2 unités
 const PALETTE = [0xff2d95, 0x7b2dff, 0x2de2ff, 0xffd02d, 0x2dff8a, 0xff6a2d].map((c) => new THREE.Color(c));
@@ -13,6 +14,10 @@ const PALETTE = [0xff2d95, 0x7b2dff, 0x2de2ff, 0xffd02d, 0x2dff8a, 0xff6a2d].map
 const MOVES = ['Pose.01', 'Pose.02', 'Pose.03', 'Pose.04', 'Pose.05', 'Pose.06', 'Pose.08', 'Wait'];
 const MII_SCALE = 0.2;
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
+// bras posés à la main (par-dessus l'animation) : [avant, bas, coude, avant-bras levé]
+const ARMS_UP = { l: [0.2, -0.45, 0.1, -0.9], r: [0.2, -0.45, 0.1, -0.9] };
+const ARMS_CROSSED = { l: [1.45, 0.75, 1.7], r: [1.45, 0.75, 1.7] };
+const clapArms = (t) => { const v = [1.25, 0.45, 0.6 + Math.sin(t * 18) * 0.25]; return { l: v, r: v }; };
 
 function softDot(size = 64) {
   const cv = document.createElement('canvas'); cv.width = cv.height = size;
@@ -83,6 +88,7 @@ export class Club {
     this.buildLedWall();
     this.buildCones();
     this.buildConfetti();
+    this.buildFlower();
 
     this.dancers = [];      // { actor, spot, yaw, pose }
     this.fx = { lasers: false, strobe: false, ball: true, smoke: false };
@@ -324,6 +330,65 @@ export class Club {
     }
   }
 
+  /**
+   * La grande fleur de néon, sur le mur derrière le DJ : un pétale s'allume et s'ouvre à chaque palier d'ambiance,
+   * et au drop elle s'épanouit complètement (une deuxième couronne de pétales, elle tourne et change de couleur).
+   */
+  buildFlower() {
+    const flower = this.flower = new THREE.Group();
+    flower.position.set(0, 7.6, -15.55);
+    flower.scale.setScalar(1.55);
+    const petalCurve = (len, wid) => {
+      const pts = [];
+      for (let k = 0; k <= 40; k++) {
+        const a = (k / 40) * Math.PI * 2;
+        // une goutte : étroite au centre, large au bout
+        const y = (1 - Math.cos(a)) / 2 * len, x = Math.sin(a) * wid * Math.sin((1 - Math.cos(a)) / 2 * Math.PI * 0.9);
+        pts.push(new THREE.Vector3(x, y, 0));
+      }
+      return new THREE.CatmullRomCurve3(pts, true);
+    };
+    const make = (n, len, wid, radius, offset) => Array.from({ length: n }, (_, i) => {
+      const pivot = new THREE.Group();
+      pivot.rotation.z = offset + (i / n) * Math.PI * 2;
+      const mat = new THREE.MeshBasicMaterial({ color: 0xff2d95, transparent: true, opacity: 0 });
+      const tube = new THREE.Mesh(new THREE.TubeGeometry(petalCurve(len, wid), 80, radius, 6, true), mat);
+      tube.position.y = 0.45;
+      pivot.add(tube);
+      pivot.scale.setScalar(0.001);
+      flower.add(pivot);
+      return { pivot, mat, open: 0 };
+    });
+    this.petals = make(8, 2.5, 0.75, 0.085, 0);
+    this.outerPetals = make(8, 3.3, 0.9, 0.065, Math.PI / 8);
+    const heart = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.08, 8, 32), new THREE.MeshBasicMaterial({ color: 0xffd02d }));
+    const core = new THREE.Mesh(new THREE.CircleGeometry(0.32, 24), new THREE.MeshBasicMaterial({ color: 0xffe9a0 }));
+    flower.add(heart, core);
+    this.flowerCore = [heart, core];
+    this.scene.add(flower);
+  }
+
+  updateFlower(dt, t, beats, drop, pulse) {
+    const lit = Math.floor(this.hype / 12);   // un pétale de plus tous les 12 % d'ambiance (8 pétales)
+    const hue = (beats * 0.03) % 1;
+    this.petals.forEach((p, i) => {
+      const target = drop || i < lit ? 1 : 0;
+      p.open += (target - p.open) * Math.min(1, dt * 3);
+      p.pivot.scale.setScalar(Math.max(0.001, p.open * (1 + pulse * 0.06)));
+      p.mat.opacity = p.open;
+      p.mat.color.setHSL(drop ? (hue + i / 8) % 1 : 0.92 - i * 0.015, 1, 0.55 + pulse * 0.15);
+    });
+    // au drop : la deuxième couronne s'ouvre, la fleur tourne
+    this.outerPetals.forEach((p, i) => {
+      p.open += ((drop ? 1 : 0) - p.open) * Math.min(1, dt * 2.5);
+      p.pivot.scale.setScalar(Math.max(0.001, p.open));
+      p.mat.opacity = p.open;
+      p.mat.color.setHSL((hue + 0.5 + i / 8) % 1, 1, 0.6);
+    });
+    this.flower.rotation.z += dt * (drop ? 0.8 : 0.05);
+    this.flowerCore[0].material.color.setHSL(0.13, 1, 0.5 + pulse * 0.3);
+  }
+
   /** Des confettis qui tombent pendant le drop et la pleine floraison. */
   buildConfetti() {
     const n = 360;
@@ -376,6 +441,25 @@ export class Club {
 
   /** Ajoute un danseur sur une place libre de la piste (il arrive en sautant). */
   addDancer(bytes) {
+    // un Mii qui a une grande affinité (jour 1) avec un danseur seul vient danser en duo avec lui
+    const me = { b64: bytesToB64(bytes), bytes };
+    const duos = this.dancers.filter((d) => d.partner).length / 2;
+    const partner = duos < 3 && this.dancers.find((d) => !d.leaving && !d.partner && d.me.b64 !== me.b64 && affinity(me, d.me) >= 75);
+    if (partner) {
+      const p = partner.actor.root.position;
+      const a = new MiiActor(this.renderer, bytes);
+      a.root.scale.setScalar(0.001);
+      const side = p.x > 0 ? -1 : 1;
+      a.root.position.set(p.x + side * 1.5, 0.12, p.z + 0.2);
+      a.idle(EXPR.HAPPY); a.blinkPhase = Math.random() * 3;
+      fixMiiColors(a.root);
+      this.scene.add(a.root);
+      const d = { actor: a, me, spot: `duo${this.dancers.length}`, yaw: Math.atan2(p.x - a.root.position.x, p.z - a.root.position.z), grow: 0, phase: partner.phase, style: partner.style, partner };
+      partner.partner = d;
+      partner.yaw = Math.atan2(a.root.position.x - p.x, a.root.position.z - p.z);
+      this.dancers.push(d);
+      return { duo: [getName(partner.me.bytes) || 'Mii', getName(bytes) || 'Mii'] };
+    }
     const taken = this.dancers.map((d) => d.spot);
     const spots = [];
     for (let j = 0; j < 4; j++) for (let i = 0; i < 5; i++) spots.push([(i - 2) * 3.6 + (j % 2) * 1.2, (j - 1.5) * 3.3 + 0.5]);
@@ -390,8 +474,36 @@ export class Club {
     const yaw = Math.atan2(-x, -11 - z) + (Math.random() - 0.5) * 1.6;   // plutôt tourné vers le DJ
     fixMiiColors(a.root);
     this.scene.add(a.root);
-    this.dancers.push({ actor: a, spot: [x, z].join(), yaw, grow: 0, phase: Math.random(), style: Math.floor(Math.random() * 3) });
+    this.dancers.push({ actor: a, me, spot: [x, z].join(), yaw, grow: 0, phase: Math.random(), style: Math.floor(Math.random() * 3) });
+    return null;
   }
+
+  /** Les danseurs réagissent : 'cheer' (bras en l'air), 'clap' (ils applaudissent), 'sulk' (un danseur s'arrête et boude). */
+  crowdReact(kind, seconds = 2.2) {
+    const t = this.clock.elapsedTime;
+    const list = this.dancers.filter((d) => !d.leaving && d.grow > 0.9);
+    if (kind === 'sulk') {
+      const d = pick(list.filter((x) => !x.react || x.react.until < t) .length ? list.filter((x) => !x.react || x.react.until < t) : list);
+      if (d) { d.react = { kind, until: t + seconds }; d.actor.play('Wait', 0.2); d.actor.idle(pick([EXPR.ANGER, EXPR.SORROW])); }
+      return;
+    }
+    list.forEach((d, i) => {
+      d.react = { kind, until: t + seconds + i * 0.03 };
+      d.actor.play(kind === 'cheer' ? 'Pose.05' : 'Wait', 0.15);
+      d.actor.idle(kind === 'cheer' ? EXPR.LIKE : EXPR.HAPPY);
+    });
+  }
+
+  /** Le DJ fait un geste (les bras en l'air) pendant quelques temps. */
+  djCheer(seconds = 2.4) {
+    if (!this.dj) return;
+    this.dj.cheerUntil = this.clock.elapsedTime + seconds;
+    this.dj.play('Pose.05', 0.15);
+    this.dj.idle(EXPR.LIKE);
+  }
+
+  /** Demande une photo souvenir de la piste (prise juste après le prochain rendu). */
+  snapshot() { this.snapWanted = true; }
 
   removeDancer() {
     const d = this.dancers.find((x) => !x.leaving);
@@ -412,7 +524,7 @@ export class Club {
     const V = (x, y, z) => new THREE.Vector3(x, y, z);
     return [
       { name: 'large', from: V(-14, 9, 18), to: V(14, 8, 17), look: V(0, 2.5, -4) },
-      { name: 'dj', from: V(-5, 4.4, -3.5), to: V(5, 4.8, -4), look: V(0, 3.2, -12.4) },
+      { name: 'dj', from: V(-5, 5.2, -1.5), to: V(5, 5.6, -2), look: V(0, 5.6, -13) },   // le DJ et la fleur de néon derrière lui
       { name: 'piste', from: V(12, 2.2, 11), to: V(-12, 2.6, 10), look: V(0, 1.8, -3) },
       { name: 'plongée', from: V(0, 24, 4), to: V(0, 22, -2), look: V(0, 0, -2), roll: true },
       { name: 'foule', from: V(-3, 4.5, -9.5), to: V(3, 5.5, -9), look: V(0, 1.5, 4) },
@@ -510,6 +622,8 @@ export class Club {
     this.updateCones(energy);
     this.updateConfetti(dt, drop || this.hype >= 95);
 
+    this.updateFlower(dt, t, beats, drop, pulse);
+
     // le halo : il « éclot » avec l'ambiance
     this.bloom.strength = 0.45 + energy * 0.7 + (drop ? 0.3 : 0) + pulse * 0.2 * energy;
     this.bloom.threshold = 0.78 - energy * 0.08;   // seules les vraies lumières (dalles, néons, lasers) brillent
@@ -519,35 +633,46 @@ export class Club {
       const a = this.dj;
       a.root.position.y = 1.4 + Math.abs(Math.sin(phase * Math.PI)) * 0.12;
       a.root.rotation.y = Math.sin(beats * Math.PI / 2) * 0.15;
-      if (drop && a.mode !== 'drop') { a.mode = 'drop'; a.play('Pose.05'); a.idle(EXPR.HAPPY); }
+      const cheering = t < (a.cheerUntil ?? 0);
+      if (cheering) a.mode = 'cheer';
+      else if (drop && a.mode !== 'drop') { a.mode = 'drop'; a.play('Pose.05'); a.idle(EXPR.HAPPY); }
       else if (!drop && beat % 8 === 0 && a.lastSwap !== beat) { a.lastSwap = beat; a.mode = 'mix'; a.play(pick(['Wait', 'Pose.03', 'Pose.02', 'Pose.04'])); }
       a.update(dt, t);
+      if (cheering) a.pose(ARMS_UP);
     }
 
     // les danseurs : ils sautent sur le temps et changent de pas toutes les 2 mesures… ou à chaque temps quand c'est la folie
     this.dancers = this.dancers.filter((d) => {
       const a = d.actor;
       d.grow = d.leaving ? Math.max(0, d.grow - dt * 3) : Math.min(1, d.grow + dt * 2.5);
-      if (d.leaving && d.grow <= 0) { this.scene.remove(a.root); return false; }
-      const amp = 0.18 + energy * 0.6;
+      if (d.leaving && d.grow <= 0) { this.scene.remove(a.root); if (d.partner) d.partner.partner = null; return false; }
+      const react = d.react && t < d.react.until ? d.react.kind : null;
+      if (d.react && !react) { d.react = null; d.lastMove = -1; }
+      const amp = react === 'sulk' ? 0 : react === 'cheer' ? 0.9 : 0.18 + energy * 0.6;
       const ph = (phase + d.phase * 0.15) % 1;
       const bounce = d.style === 0 ? Math.abs(Math.sin(ph * Math.PI)) : d.style === 1 ? Math.max(0, Math.sin(ph * Math.PI * 2)) : Math.abs(Math.sin(ph * Math.PI)) ** 2;
       a.root.position.y = 0.12 + bounce * amp + (1 - d.grow) * 2;
       a.root.scale.setScalar(MII_SCALE * Math.max(0.001, d.grow));
-      let yaw = d.yaw + Math.sin(beats * Math.PI / 2 + d.phase * 6) * (0.2 + energy * 0.35);
-      if (drop || (energy > 0.85 && beat % 16 === Math.floor(d.phase * 16))) yaw += phase * Math.PI * 2;   // pirouette
+      let yaw = d.yaw + (react === 'sulk' ? 2.4 : Math.sin(beats * Math.PI / 2 + d.phase * 6) * (d.partner ? 0.1 : 0.2 + energy * 0.35));
+      if (!react && !d.partner && (drop || (energy > 0.85 && beat % 16 === Math.floor(d.phase * 16)))) yaw += phase * Math.PI * 2;   // pirouette
       a.root.rotation.set(0, yaw, Math.sin(beats * Math.PI + d.phase * 6) * 0.08 * energy);
       const every = energy > 0.7 ? 1 : energy > 0.35 ? 2 : 4;
-      if (beat % every === 0 && d.lastMove !== beat) { d.lastMove = beat; a.play(pick(MOVES), 0.12); }
-      if (beat % 8 === 0 && d.lastFace !== beat) {
+      // en duo, les deux font le même pas en même temps
+      if (!react && beat % every === 0 && d.lastMove !== beat) {
+        d.lastMove = beat;
+        a.play(d.partner ? MOVES[(beat * 7 + 3) % MOVES.length] : pick(MOVES), 0.12);
+      }
+      if (!react && beat % 8 === 0 && d.lastFace !== beat) {
         d.lastFace = beat;
         a.idle(energy > 0.7 ? pick([EXPR.HAPPY, EXPR.LIKE, EXPR.SMILE_OPEN_MOUTH ?? EXPR.HAPPY]) : pick([EXPR.SMILE, EXPR.NORMAL, EXPR.HAPPY]));
       }
       a.update(dt, t);
+      if (react) a.pose(react === 'cheer' ? ARMS_UP : react === 'clap' ? clapArms(t) : ARMS_CROSSED);
       return true;
     });
 
     this.composer.render(dt);
+    if (this.snapWanted) { this.snapWanted = false; this.snap = this.canvas.toDataURL('image/jpeg', 0.85); }
   }
 
   /** Position à l'écran (en %) au-dessus de la tête d'un danseur (pour les bulles). */

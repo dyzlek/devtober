@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=3">
+  <link rel="stylesheet" href="style.css?v=4">
 
   <!-- Moteur Mii (FFL.js) et ressources partagés avec le jour 1 -->
   <script src="../day-01-pulse/lib/ffl/ffl-emscripten-single-file.cjs"></script>
@@ -48,6 +48,11 @@
               <canvas id="club" aria-label="La boîte de nuit en 3D"></canvas>
               <div id="film" class="film">
                 <p id="caption" class="caption" aria-live="polite"></p>
+                <!-- la photo souvenir de la soirée (à la fin) -->
+                <figure id="souvenir" class="souvenir" hidden>
+                  <img id="souvenir-img" alt="Photo souvenir de la piste">
+                  <figcaption id="souvenir-text"></figcaption>
+                </figure>
               </div>
               <p id="loading" class="loading-top">Les Mii font la queue à l'entrée…</p>
             </div>
@@ -85,7 +90,7 @@
                 <!-- Écran d'entrée -->
                 <div id="start" class="start">
                   <h2>La boîte des Mii</h2>
-                  <p>Touche les cercles <b>pile quand l'anneau les rejoint</b>, au rythme de la musique. Chaque cercle réussi fait éclore la fête.</p>
+                  <p>Touche les cercles <b>pile quand l'anneau les rejoint</b>. Sur les notes longues, <b>garde le doigt appuyé</b> et suis la bille.</p>
                   <div class="levels" role="group" aria-label="Niveau">
                     <button type="button" data-level="facile" aria-pressed="false">Facile</button>
                     <button type="button" data-level="moyen" aria-pressed="true">Moyen</button>
@@ -127,7 +132,7 @@
     </div>
   </main>
 
-  <script type="module" src="game.js?v=15"></script>
+  <script type="module" src="game.js?v=16"></script>
   <!-- easter egg : le bouton HOME ouvre le menu HOME de la 3DS -->
   <script type="module" src="../shared/home.js?v=2"></script>
 </body>

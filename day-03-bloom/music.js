@@ -114,6 +114,13 @@ export class Music {
     this.env(f, t, vol, dur).connect(this.filter);
     s.start(t, Math.random() * 0.5, dur + 0.05);
   }
+  /** La foule qui crie et applaudit (combo 50, 100…). */
+  cheer() {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    this.noise(t, 0.28, 1.4, 'bandpass', 1100);
+    for (let k = 0; k < 18; k++) this.noise(t + Math.random() * 1.1, 0.12 + Math.random() * 0.1, 0.08, 'bandpass', 1400 + Math.random() * 900);
+  }
   hat(t, vol) { this.noise(t, vol, 0.05, 'highpass', 7000); }
   clap(t) { [0, 0.012, 0.024].forEach((d) => this.noise(t + d, 0.35, 0.14, 'bandpass', 1500)); }
   bass(t, f, dur, h) {
