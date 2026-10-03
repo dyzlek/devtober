@@ -1,7 +1,7 @@
 // Devtober J3 · Bloom — la boîte des Mii : un jeu de rythme façon osu! sur l'écran tactile.
 // Touche chaque cercle pile quand l'anneau le rejoint : il s'ouvre en fleur, et la fête « éclot » là-haut.
 import { initMii, randomMii, setName, b64ToBytes } from '../day-01-pulse/mii3d.js?v=3';
-import { Club } from './club.js?v=11';
+import { Club } from './club.js?v=12';
 import { Music, SECONDS_PER_BEAT as SPB } from './music.js?v=4';
 
 const $ = (s) => document.querySelector(s);
