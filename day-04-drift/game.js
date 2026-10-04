@@ -1,7 +1,7 @@
 // Drift · Mii Kart : une course de karts à 8 Mii sur 3 tours. Le dérapage charge un turbo.
 import * as THREE from 'three';
 import { initMii, useRenderer, randomMii, setName, getName, b64ToBytes, bytesToB64, renderIcon, MiiActor, EXPR } from '../day-01-pulse/mii3d.js?v=3';
-import { Track, WALL } from './track.js?v=2';
+import { Track, WALL, PODIUM } from './track.js?v=3';
 import { Kart, SPARK_COLORS } from './kart.js?v=8';
 import { Fx } from './fx.js?v=2';
 import { Audio } from './audio.js?v=2';
@@ -284,9 +284,9 @@ function removePodium() {
 }
 function buildPodium(top3) {
   removePodium();
-  const i = 30, h = track.heading(i);
+  const h = track.heading(PODIUM.i);
   const group = new THREE.Group();
-  group.position.copy(track.at(i, WALL + 9));
+  group.position.copy(track.at(PODIUM.i, PODIUM.off));
   group.rotation.y = h - Math.PI / 2;   // il regarde la piste
   const colors = [0xffd23a, 0xd8dde3, 0xe0a060];
   const slots = [[0, 1.5], [-2.3, 1.0], [2.3, 0.65]];   // 1er au centre, 2e à gauche, 3e à droite

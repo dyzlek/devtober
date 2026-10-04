@@ -3,6 +3,8 @@ import * as THREE from 'three';
 
 export const ROAD = 7;      // demi-largeur de la route
 export const WALL = 12.5;   // distance du centre aux murets (entre les deux : l'herbe, qui ralentit)
+/** Où se dresse le podium : à côté de la piste, au point n° i. */
+export const PODIUM = { i: 30, off: WALL + 9 };
 const N = 1200;             // nombre de points de la ligne centrale
 
 // le tracé, vu du ciel (x, z) : une longue ligne droite, un grand virage, des S et une épingle
@@ -287,9 +289,11 @@ export class Track {
     // des arbres ronds, façon jouet
     const spots = [];
     let tries = 0;
+    // pas d'arbre sur le podium de l'arrivée (ni dans le cercle de la caméra qui tourne autour)
+    const podium = this.at(PODIUM.i, PODIUM.off);
     while (spots.length < 220 && tries++ < 6000) {
       const x = -230 + Math.random() * 420, z = -210 + Math.random() * 370;
-      if (this.clearOfRoad(x, z, WALL + 5)) spots.push([x, z, 0.8 + Math.random() * 0.8]);
+      if (this.clearOfRoad(x, z, WALL + 5) && Math.hypot(x - podium.x, z - podium.z) > 15) spots.push([x, z, 0.8 + Math.random() * 0.8]);
     }
     const trunk = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.35, 0.5, 2.4, 7), new THREE.MeshLambertMaterial({ color: 0x8a5a33 }), spots.length);
     const crown = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(2.2, 1), new THREE.MeshLambertMaterial({ flatShading: true }), spots.length);
