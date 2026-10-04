@@ -2,7 +2,8 @@
 // Touche chaque cercle pile quand l'anneau le rejoint : il s'ouvre en fleur, et la fête « éclot » là-haut.
 import { initMii, randomMii, setName, b64ToBytes } from '../day-01-pulse/mii3d.js?v=3';
 import { Club } from './club.js?v=12';
-import { Music, SECONDS_PER_BEAT as SPB } from './music.js?v=4';
+import { Music, SECONDS_PER_BEAT as SPB } from './music.js?v=5';
+import { setupEasterEgg } from './easter.js?v=1';
 
 const $ = (s) => document.querySelector(s);
 const MII_STORE = 'devtober-pulse-miis-v3';
@@ -477,6 +478,7 @@ club.addDancer(pool[nextMii++]);
 club.addDancer(pool[nextMii++]);
 resizeField();
 $('#loading').classList.add('done');
+setupEasterEgg({ music, caption, title: $('#start h2'), screen: $('.screen-top'), muteBtn: $('#mute') });
 $('#open').disabled = false;
 $('#open').textContent = 'Ouvrir la boîte';
 requestAnimationFrame(frame);
