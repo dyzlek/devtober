@@ -15,7 +15,7 @@ Toutes les créations sont jouables depuis la page d'accueil du repo, publiée s
 | 01 | Pulse | [Testeur d'affinité](day-01-pulse/) |
 | 02 | Loop | [Téléphone traduit](day-02-loop/) · [Ludo des Mii](day-02-loop/ludo/) |
 | 03 | Bloom | [La boîte des Mii](day-03-bloom/) |
-| 04 | Drift |  |
+| 04 | Drift | [Mii Kart](day-04-drift/) |
 | 05 | Chaos |  |
 | 06 | Tiny |  |
 | 07 | Swarm |  |
