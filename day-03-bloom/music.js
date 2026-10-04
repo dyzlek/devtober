@@ -21,7 +21,7 @@ export class Music {
     if (this.started) return;
     this.ctx = new (window.AudioContext || window.webkitAudioContext)();
     const c = this.ctx;
-    this.out = c.createGain(); this.out.gain.value = this.muted ? 0 : 0.8;
+    this.out = c.createGain(); this.out.gain.value = this.muted || this.override ? 0 : 0.8;
     const comp = c.createDynamicsCompressor();
     comp.threshold.value = -14; comp.ratio.value = 4;
     this.out.connect(comp).connect(c.destination);
@@ -53,7 +53,15 @@ export class Music {
 
   setMuted(m) {
     this.muted = m;
-    if (this.out) this.out.gain.setTargetAtTime(m ? 0 : 0.8, this.ctx.currentTime, 0.05);
+    this.applyGain();
+  }
+  /** Easter egg : une autre musique joue à la place (le morceau continue, sans le son, pour garder le tempo). */
+  setOverride(on) {
+    this.override = on;
+    this.applyGain();
+  }
+  applyGain() {
+    if (this.out) this.out.gain.setTargetAtTime(this.muted || this.override ? 0 : 0.8, this.ctx.currentTime, 0.05);
   }
 
   /** Temps écoulé en « temps musicaux » (1 = un temps), basé sur l'horloge audio. */

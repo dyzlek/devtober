@@ -251,3 +251,14 @@ button { cursor: pointer; }
 .souvenir img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: .3cqw; }
 .souvenir figcaption { padding: 1.4cqw 0 1.8cqw; text-align: center; font-weight: 900; font-size: 2.6cqw; color: #4a3324; }
 @keyframes souvenir { from { opacity: 0; transform: translate(-50%, -30%) rotate(8deg) scale(.7); } }
+
+/* Easter egg : DJ Rémi (5 taps sur le titre, ou « remi » au clavier) */
+.start h2 { cursor: default; user-select: none; }
+.start h2.remi { color: var(--pink); animation: remiShake .35s ease-in-out infinite; }
+@keyframes remiShake { 25% { transform: rotate(-2deg); } 75% { transform: rotate(2deg); } }
+.remi-tag {
+  position: absolute; right: 2cqw; top: 2cqw; z-index: 5; padding: .6cqw 2cqw; border-radius: 99px; pointer-events: none;
+  background: var(--pink); color: #fff; font-weight: 900; font-size: 2.6cqw; font-style: italic;
+  box-shadow: 0 0 0 .4cqw #fff, 0 1cqw 2cqw rgba(0,0,0,.35); animation: remiShake .5s ease-in-out infinite;
+}
+.remi-tag[hidden] { display: none; }
