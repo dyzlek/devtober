@@ -17,6 +17,7 @@ export const PUBLISHED = {
     extras: [{ path: 'ludo', title: 'Ludo des Mii', pitch: 'Un Ludo en 3D dans la 3DS : toi et trois Mii bots, un dé qui roule vraiment.' }],
   },
   3: { title: 'La boîte des Mii', pitch: 'Un jeu de rythme façon osu! : chaque note réussie fait éclore la fête, et la fleur de néon du DJ s’ouvre jusqu’à la pleine floraison.' },
+  4: { title: 'Mii Kart', pitch: 'Une course de karts à 8 Mii sur 3 tours : dérape dans les virages pour charger un mini-turbo.' },
 };
 
 export const slugOf = (n) => `day-${String(n).padStart(2, '0')}-${WORDS[n - 1].toLowerCase()}`;

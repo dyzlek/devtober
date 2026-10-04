@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Drift · Mii Kart</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,600;0,800;0,900;1,900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=2">
+
+  <!-- Moteur Mii (FFL.js) et ressources partagés avec le jour 1 -->
+  <script src="../day-01-pulse/lib/ffl/ffl-emscripten-single-file.cjs"></script>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://esm.sh/three@0.180.0",
+        "three/": "https://esm.sh/three@0.180.0/",
+        "three/addons/": "https://esm.sh/three@0.180.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="i-sound" viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></symbol>
+      <symbol id="i-mute" viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="m22 9-6 6"/><path d="m16 9 6 6"/></symbol>
+      <symbol id="i-left" viewBox="0 0 24 24"><path d="m15 5-7 7 7 7"/></symbol>
+      <symbol id="i-right" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol>
+      <symbol id="i-drift" viewBox="0 0 24 24"><path d="M4 18c4 0 5-4 8-6s6-1 8-6"/><path d="m16 4 4 2-1 4"/></symbol>
+      <symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 21V4"/><path d="M5 4h12l-2 4 2 4H5"/></symbol>
+      <!-- objets (en couleurs) -->
+      <symbol id="o-banana" viewBox="0 0 24 24"><path d="M4 7c1 8 7 12 15 11-6-2-10-6-11-12z" fill="#ffd23a" stroke="#c89a00" stroke-width="1.4" stroke-linejoin="round"/><path d="M8 6l-1-3" stroke="#6b4a1a" stroke-width="2" stroke-linecap="round"/></symbol>
+      <symbol id="o-shell" viewBox="0 0 24 24"><path d="M4 15a8 8 0 0 1 16 0z" fill="#2fbf4a" stroke="#1a7a2c" stroke-width="1.4"/><path d="M9 9l3 3 3-3M12 12v3" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round"/><rect x="3" y="15" width="18" height="3.5" rx="1.7" fill="#fff" stroke="#bbb"/></symbol>
+      <symbol id="o-mushroom" viewBox="0 0 24 24"><path d="M3 12a9 8 0 0 1 18 0z" fill="#e8323c" stroke="#9a1820" stroke-width="1.3"/><circle cx="8" cy="8.5" r="1.8" fill="#fff"/><circle cx="15" cy="7.5" r="2.2" fill="#fff"/><path d="M8 12h8v5a4 4 0 0 1-8 0z" fill="#fff3d6" stroke="#c8a87a" stroke-width="1.2"/><circle cx="10.5" cy="14.5" r=".9" fill="#333"/><circle cx="13.5" cy="14.5" r=".9" fill="#333"/></symbol>
+      <symbol id="o-star" viewBox="0 0 24 24"><path d="M12 2.5l2.8 6 6.6.6-5 4.4 1.5 6.5L12 16.6 6.1 20l1.5-6.5-5-4.4 6.6-.6z" fill="#ffd23a" stroke="#d99a00" stroke-width="1.3" stroke-linejoin="round"/><circle cx="10" cy="10.5" r=".9" fill="#333"/><circle cx="14" cy="10.5" r=".9" fill="#333"/></symbol>
+      <symbol id="o-coin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="#ffc21a" stroke="#c88a00" stroke-width="1.6"/><rect x="10.5" y="7" width="3" height="10" rx="1.5" fill="#fff3c4"/></symbol>
+      <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-9.6A4 4 0 0 1 12 7.8a4 4 0 0 1 7 2.6C19 15.6 12 20 12 20z" fill="#ff5b8d"/></symbol>
+      <symbol id="i-flame" viewBox="0 0 24 24"><path d="M12 21c-4 0-6.5-2.6-6.5-6 0-4 3.5-5.5 3.5-9.5 2.5 1.5 4 3.5 4 6 1-1 1.5-2 1.5-3.5 2 1.5 4 4 4 7 0 3.4-2.5 6-6.5 6z" fill="#ff6a1f"/></symbol>
+    </defs>
+  </svg>
+
+  <main class="page">
+    <p class="kicker">Devtober · Jour 04 · <strong>Drift</strong> · Mii Kart</p>
+
+    <div class="ds-wrap">
+      <div class="ds">
+        <!-- ===== Couvercle : la course ===== -->
+        <div class="lid">
+          <span class="cam" aria-hidden="true"></span>
+          <span class="speaker l" aria-hidden="true"></span>
+          <div class="bezel-top">
+            <div class="screen-top">
+              <canvas id="race" aria-label="La course en 3D"></canvas>
+              <canvas id="speed" class="speed" aria-hidden="true"></canvas>
+              <div id="race-hud" class="race-hud" hidden>
+                <p class="lap outline">Tour <b id="lap">1</b>/3</p>
+                <p class="coins outline"><svg class="ic"><use href="#o-coin"/></svg><b id="coins">0</b></p>
+                <div class="slot" id="slot" aria-label="Objet"><svg><use id="slot-icon" href=""/></svg></div>
+                <p class="time outline" id="time">0:00.00</p>
+                <p class="pos outline" id="pos">8<sup>e</sup></p>
+                <p class="combo-pop outline" id="pop"></p>
+              </div>
+              <p id="msg" class="msg outline" aria-live="polite"></p>
+              <p id="loading" class="loading-top">Les Mii gonflent leurs pneus…</p>
+            </div>
+          </div>
+          <span class="speaker r" aria-hidden="true"></span>
+          <span class="slider3d" aria-hidden="true"><i></i></span>
+        </div>
+
+        <div class="hinge" aria-hidden="true"></div>
+
+        <!-- ===== Base : la carte et les commandes ===== -->
+        <div class="base">
+          <div class="side left" aria-hidden="true">
+            <span class="circle-pad"><i></i></span>
+            <span class="dpad"><span class="d-up"></span><span class="d-left"></span><span class="d-right"></span><span class="d-down"></span></span>
+          </div>
+
+          <div class="center">
+            <div class="bezel-bottom">
+              <section class="touch" aria-label="Carte du circuit et commandes">
+                <div class="topbar">
+                  <span class="chip">Circuit Mii · <b id="cc-label">100cc</b></span>
+                  <span class="grow"></span>
+                  <button id="mute" type="button" class="icon-btn" aria-pressed="false" title="Son" aria-label="Couper le son"><svg class="ic"><use href="#i-sound"/></svg></button>
+                </div>
+                <canvas id="map" class="map" aria-label="Carte du circuit"></canvas>
+                <ol id="board" class="board" aria-label="Classement en direct"></ol>
+                <div class="controls">
+                  <button id="left" type="button" class="pad-btn" aria-label="Tourner à gauche"><svg class="ic"><use href="#i-left"/></svg></button>
+                  <button id="right" type="button" class="pad-btn" aria-label="Tourner à droite"><svg class="ic"><use href="#i-right"/></svg></button>
+                  <button id="use" type="button" class="pad-btn item-btn" aria-label="Utiliser l'objet" disabled><svg><use id="use-icon" href=""/></svg></button>
+                  <span class="gauge" aria-hidden="true"><i></i><i></i><i></i></span>
+                  <button id="drift" type="button" class="drift-btn" aria-label="Sauter et déraper"><svg class="ic"><use href="#i-drift"/></svg>Drift</button>
+                </div>
+
+                <!-- Écran de départ -->
+                <div id="start" class="panel">
+                  <h2>Mii <span>Kart</span></h2>
+                  <div class="picker" id="picker">
+                    <button type="button" class="icon-btn" data-d="-1" aria-label="Pilote précédent"><svg class="ic"><use href="#i-left"/></svg></button>
+                    <img id="pick-img" alt="">
+                    <div><small>Ton pilote</small><b id="pick-name">Mii</b></div>
+                    <button type="button" class="icon-btn" data-d="1" aria-label="Pilote suivant"><svg class="ic"><use href="#i-right"/></svg></button>
+                  </div>
+                  <div class="cc" role="group" aria-label="Cylindrée">
+                    <button type="button" data-cc="50" aria-pressed="false">50cc</button>
+                    <button type="button" data-cc="100" aria-pressed="true">100cc</button>
+                    <button type="button" data-cc="150" aria-pressed="false">150cc</button>
+                  </div>
+                  <button id="go" type="button" class="big-btn" disabled>Chargement…</button>
+                  <p class="small">Flèches pour tourner. Maintiens <b>Espace</b> en tournant pour déraper, lâche pour le turbo.</p>
+                </div>
+
+                <!-- Résultats -->
+                <div id="results" class="panel" hidden>
+                  <h2 id="r-title">Arrivée !</h2>
+                  <ol id="ranking" class="ranking"></ol>
+                  <p class="small" id="r-stats"></p>
+                  <div class="btn-row">
+                    <button id="again" type="button" class="big-btn">Rejouer</button>
+                    <button id="menu" type="button" class="big-btn alt">Pilotes</button>
+                  </div>
+                </div>
+              </section>
+            </div>
+            <div class="sys-btns" aria-hidden="true"><span>SELECT</span><span class="home">HOME</span><span>START</span></div>
+          </div>
+
+          <div class="side right" aria-hidden="true">
+            <span class="abxy"><span class="b-x">X</span><span class="b-y">Y</span><span class="b-a">A</span><span class="b-b">B</span></span>
+            <span class="power"><i></i>POWER</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script type="module" src="game.js?v=17"></script>
+  <!-- easter egg : le bouton HOME ouvre le menu HOME de la 3DS -->
+  <script type="module" src="../shared/home.js?v=4"></script>
+</body>
+</html>
